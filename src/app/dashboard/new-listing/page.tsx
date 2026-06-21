@@ -72,7 +72,7 @@ export default function NewListingPage() {
             placeholder="e.g., Engineering Graphics Textbook"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5B8C72]"
+            className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] bg-white"
           />
         </div>
 
@@ -114,7 +114,7 @@ export default function NewListingPage() {
               placeholder="e.g., 450"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
-              className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5B8C72]"
+              className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] bg-white"
             />
           </div>
         )}
@@ -127,7 +127,7 @@ export default function NewListingPage() {
             placeholder="Describe your item condition, block location, or preferred trade item options..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5B8C72] resize-none"
+            className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] resize-none bg-white"
           />
         </div>
 
