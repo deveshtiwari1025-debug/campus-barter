@@ -28,7 +28,6 @@ export default function NewListingPage() {
       // 2. Insert record into the items table
       const { error } = await supabase
         .from('items')
-        .select('*')
         .insert([
           {
             title,
@@ -38,6 +37,7 @@ export default function NewListingPage() {
             owner_id: user.id
           }
         ])
+        .select()
 
       if (error) throw error
 
