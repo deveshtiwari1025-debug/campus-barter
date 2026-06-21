@@ -26,6 +26,15 @@ export default function DashboardPage() {
   const fetchMarketplaceItems = useCallback(async () => {
     try {
       setLoading(true)
+      
+      // 1. Check if an active session exists first to prevent server-side auth crashes
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        console.log("No active auth session found yet, skipping database fetch.")
+        return
+      }
+
+      // 2. Fetch the listings safely
       const { data, error } = await supabase
         .from('items')
         .select('*')
@@ -39,10 +48,6 @@ export default function DashboardPage() {
       setLoading(false)
     }
   }, [supabase])
-
-  useEffect(() => {
-    fetchMarketplaceItems()
-  }, [fetchMarketplaceItems])
 
   const filteredItems = items.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
