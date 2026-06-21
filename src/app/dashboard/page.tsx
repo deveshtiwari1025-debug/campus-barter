@@ -9,9 +9,11 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [filter, setFilter] = useState('All') // 'All', 'Swap', 'Buy'
+  const [activeTab, setActiveTab] = useState('Marketplace') // 'Marketplace', 'MyListings'
   const [userSession, setUserSession] = useState<any>(null)
   
-  // Handshake Modal Tracking
+  // Modals & Handshakes
+  const [selectedItem, setSelectedItem] = useState<any>(null)
   const [activeHandshake, setActiveHandshake] = useState<any>(null)
   const [inputBuyerOtp, setInputBuyerOtp] = useState('')
   const [inputSellerOtp, setInputSellerOtp] = useState('')
@@ -20,21 +22,18 @@ export default function DashboardPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  // 1. Silent auth check (Doesn't boot out public users)
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUserSession(session)
     })
   }, [supabase])
 
-  // 2. Fetch fresh items directly from the table
   const fetchMarketplaceItems = useCallback(async () => {
     try {
       setLoading(true)
       const { data, error } = await supabase
         .from('items')
         .select('*')
-        .eq('status', 'available')
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -50,7 +49,6 @@ export default function DashboardPage() {
     fetchMarketplaceItems()
   }, [fetchMarketplaceItems])
 
-  // Intercept actions for non-logged-in users
   const handleProtectedAction = (actionCallback: () => void) => {
     if (!userSession) {
       router.push('/signup')
@@ -59,7 +57,6 @@ export default function DashboardPage() {
     }
   }
 
-  // 3. Initiate Transaction & Generate Dual OTP codes
   const initiateTransaction = async (item: any) => {
     try {
       const buyerId = userSession.user.id
@@ -68,7 +65,6 @@ export default function DashboardPage() {
         return
       }
 
-      // Generate random 6-digit codes
       const generatedBuyerOtp = Math.floor(100000 + Math.random() * 900000).toString()
       const generatedSellerOtp = Math.floor(100000 + Math.random() * 900000).toString()
 
@@ -89,41 +85,33 @@ export default function DashboardPage() {
 
       if (error) throw error
       setActiveHandshake(data)
-      alert(`Deal Initiated! Meet up on campus. Your OTP for the seller is: ${generatedBuyerOtp}. Get their OTP to complete the verification!`)
+      setSelectedItem(null) // close details modal
+      alert(`Deal Initiated! Use the verification panel on your dashboard to finalize. Your code for the seller is: ${generatedBuyerOtp}`)
     } catch (err: any) {
       alert(err.message)
     }
   }
 
-  // 4. Verify Double Handshake OTP
   const verifyHandshake = async () => {
     if (!activeHandshake) return
     setVerificationError('')
 
     try {
-      // Check if codes match the DB entries
-      const matchesBuyer = inputBuyerOtp === activeHandshake.buyer_otp
-      const matchesSeller = inputSellerOtp === activeHandshake.seller_otp
-
-      if (!matchesBuyer || !matchesSeller) {
-        throw new Error('Invalid OTP codes entered. Check with the other party.')
+      if (inputBuyerOtp !== activeHandshake.buyer_otp || inputSellerOtp !== activeHandshake.seller_otp) {
+        throw new Error('Invalid OTP codes entered. Check codes with the other party.')
       }
 
-      // Update offer record to status complete
-      const { error: offerError } = await supabase
+      await supabase
         .from('offers')
         .update({ buyer_verified: true, seller_verified: true, status: 'completed' })
         .eq('id', activeHandshake.id)
 
-      if (offerError) throw offerError
-
-      // Mark the actual marketplace item as sold
       await supabase
         .from('items')
         .update({ status: 'sold' })
         .eq('id', activeHandshake.item_id)
 
-      alert('Success! Transaction securely closed and verified.')
+      alert('Handshake verified successfully! Item marked as Sold.')
       setActiveHandshake(null)
       setInputBuyerOtp('')
       setInputSellerOtp('')
@@ -133,118 +121,172 @@ export default function DashboardPage() {
     }
   }
 
-  // Search and filter sorting logic
-  const filteredItems = items.filter(item => {
+  const deleteItem = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this listing?')) return
+    const { error } = await supabase.from('items').delete().eq('id', id)
+    if (error) alert(error.message)
+    else fetchMarketplaceItems()
+  }
+
+  // Frontend Client-Side Filter Execution
+  const displayedItems = items.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           item.description.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesFilter = filter === 'All' || item.listing_type === filter
-    return matchesSearch && matchesFilter
+    const matchesTab = activeTab === 'Marketplace' 
+      ? item.status === 'available' 
+      : item.owner_id === userSession?.user?.id
+    
+    return matchesSearch && matchesFilter && matchesTab
   })
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
-      {/* Header Utilities */}
+      {/* Top Segmented Navigation Tabs */}
+      <div className="flex justify-center border-b border-gray-100 mb-6 gap-8 text-sm font-semibold">
+        <button 
+          onClick={() => setActiveTab('Marketplace')} 
+          className={`pb-3 ${activeTab === 'Marketplace' ? 'border-b-2 border-[#5B8C72] text-[#5B8C72]' : 'text-gray-400'}`}
+        >
+          Marketplace
+        </button>
+        <button 
+          onClick={() => handleProtectedAction(() => setActiveTab('MyListings'))} 
+          className={`pb-3 ${activeTab === 'MyListings' ? 'border-b-2 border-[#5B8C72] text-[#5B8C72]' : 'text-gray-400'}`}
+        >
+          My Listings
+        </button>
+      </div>
+
+      {/* Control Utility Row */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
         <input
           type="text"
-          placeholder="Search textbooks, electronics, lab coats..."
+          placeholder="Search items..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full sm:max-w-md px-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#5B8C72] text-gray-900 bg-white"
+          className="w-full sm:max-w-md px-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none text-gray-900 bg-white"
         />
         
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <button
-            onClick={() => setFilter('All')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'All' ? 'bg-[#5B8C72] text-white' : 'bg-gray-100 text-gray-600'}`}
-          >
-            All Items
-          </button>
-          <button
-            onClick={() => setFilter('Swap')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'Swap' ? 'bg-[#5B8C72] text-white' : 'bg-gray-100 text-gray-600'}`}
-          >
-            Swaps
-          </button>
-          <button
-            onClick={() => setFilter('Buy')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'Buy' ? 'bg-[#5B8C72] text-white' : 'bg-gray-100 text-gray-600'}`}
-          >
-            Buys
-          </button>
+          {['All', 'Swap', 'Buy'].map((t) => (
+            <button
+              key={t}
+              onClick={() => setFilter(t)}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === t ? 'bg-[#5B8C72] text-white' : 'bg-gray-100 text-gray-600'}`}
+            >
+              {t === 'All' ? 'All Items' : t === 'Swap' ? 'Swaps' : 'Buys'}
+            </button>
+          ))}
           <button
             onClick={() => handleProtectedAction(() => router.push('/dashboard/new-listing'))}
-            className="ml-4 px-4 py-2 text-xs font-bold bg-[#5B8C72] text-white rounded-lg hover:bg-[#5B8C72]/90 tracking-wider uppercase"
+            className="ml-4 px-4 py-2 text-xs font-bold bg-[#5B8C72] text-white rounded-lg uppercase tracking-wider"
           >
             + Create Post
           </button>
         </div>
       </div>
 
-      {/* Handshake Verification Portal Component */}
+      {/* Secure Handshake Widget */}
       {activeHandshake && (
         <div className="mb-8 p-6 bg-amber-50/60 border border-amber-200 rounded-2xl max-w-md mx-auto">
           <h3 className="text-sm font-bold text-amber-900 mb-1">🔐 Secure Handshake Verification</h3>
-          <p className="text-xs text-amber-700 mb-4">Provide your code to the seller and enter theirs below to finalize the trade securely.</p>
+          <p className="text-xs text-amber-700 mb-4">Swap OTP validation codes to close your transaction.</p>
           {verificationError && <p className="text-xs text-red-600 font-semibold mb-2">{verificationError}</p>}
           <div className="space-y-3">
-            <div>
-              <label className="block text-[10px] font-bold text-amber-800 uppercase tracking-wider mb-1">Your Code (Give to Seller)</label>
-              <input type="text" disabled value={activeHandshake.buyer_otp} className="w-full px-3 py-1.5 bg-white border border-amber-200 rounded-lg font-mono text-center font-bold text-amber-900 text-sm" />
-            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[10px] font-bold text-amber-800 uppercase tracking-wider mb-1">Confirm Your Code</label>
+                <label className="block text-[10px] font-bold text-amber-800 uppercase mb-1">Confirm Your Code</label>
                 <input type="text" maxLength={6} placeholder="Buyer OTP" value={inputBuyerOtp} onChange={(e) => setInputBuyerOtp(e.target.value)} className="w-full px-3 py-1.5 bg-white border border-amber-200 rounded-lg text-center font-mono text-sm text-gray-900" />
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-amber-800 uppercase tracking-wider mb-1">Enter Seller's Code</label>
+                <label className="block text-[10px] font-bold text-amber-800 uppercase mb-1">Enter Seller's Code</label>
                 <input type="text" maxLength={6} placeholder="Seller OTP" value={inputSellerOtp} onChange={(e) => setInputSellerOtp(e.target.value)} className="w-full px-3 py-1.5 bg-white border border-amber-200 rounded-lg text-center font-mono text-sm text-gray-900" />
               </div>
             </div>
-            <button onClick={verifyHandshake} className="w-full mt-2 py-2 text-xs font-bold text-white bg-amber-700 hover:bg-amber-800 rounded-lg uppercase tracking-wider">
+            <button onClick={verifyHandshake} className="w-full mt-2 py-2 text-xs font-bold text-white bg-amber-700 rounded-lg uppercase tracking-wider">
               Verify & Complete Deal
             </button>
           </div>
         </div>
       )}
 
-      {/* Main Grid Wall */}
+      {/* Main Listing Output Grid */}
       {loading ? (
-        <p className="text-center text-sm text-gray-500 py-12">Scanning campus catalog...</p>
-      ) : filteredItems.length === 0 ? (
-        <p className="text-center text-sm text-gray-400 py-12">No campus listings match your current filters.</p>
+        <p className="text-center text-sm text-gray-500 py-12">Loading items...</p>
+      ) : displayedItems.length === 0 ? (
+        <p className="text-center text-sm text-gray-400 py-12">No listings found.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map((item) => (
+          {displayedItems.map((item) => (
             <div key={item.id} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
               <div>
-                {item.image_url && (
-                  <img src={item.image_url} alt={item.title} className="w-full h-40 object-cover rounded-xl mb-4 border border-gray-50" />
-                )}
+                {item.image_url && <img src={item.image_url} alt={item.title} className="w-full h-40 object-cover rounded-xl mb-4" />}
                 <div className="flex justify-between items-start gap-2 mb-2">
                   <h2 className="font-bold text-gray-800 text-base line-clamp-1">{item.title}</h2>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${item.listing_type === 'Swap' ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
-                    {item.listing_type === 'Swap' ? '🔄 Swap' : `₹${item.price}`}
-                  </span>
+                  <span className="text-xs font-bold text-emerald-600">{item.listing_type === 'Swap' ? '🔄 Swap' : `₹${item.price}`}</span>
                 </div>
-                <p className="text-xs text-gray-500 line-clamp-3 mb-4 leading-relaxed">{item.description}</p>
+                <p className="text-xs text-gray-500 line-clamp-2 mb-4">{item.description}</p>
               </div>
 
               <div className="pt-4 border-t border-gray-50 flex flex-col gap-2">
-                <div className="flex justify-between text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
-                  <span>📍 {item.building_block}</span>
-                  <span>📦 {item.category}</span>
-                </div>
-                <button
-                  onClick={() => handleProtectedAction(() => initiateTransaction(item))}
-                  className="w-full mt-2 py-2 text-xs font-bold text-center text-white bg-[#5B8C72] hover:bg-[#5B8C72]/90 rounded-lg transition-colors uppercase tracking-wider"
-                >
-                  {item.listing_type === 'Swap' ? '🤝 Request Swap' : '🛒 Purchase Item'}
-                </button>
+                {activeTab === 'MyListings' ? (
+                  <div className="flex gap-2">
+                    <span className={`px-3 py-1.5 text-xs font-bold rounded-lg text-center flex-1 ${item.status === 'sold' ? 'bg-gray-100 text-gray-400' : 'bg-emerald-50 text-emerald-700'}`}>
+                      {item.status === 'sold' ? 'Sold Out' : 'Active'}
+                    </span>
+                    <button onClick={() => deleteItem(item.id)} className="px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 rounded-lg hover:bg-red-100">
+                      Delete
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setSelectedItem(item)}
+                    className="w-full py-2 text-xs font-bold text-center text-white bg-[#5B8C72] rounded-lg uppercase tracking-wider"
+                  >
+                    View Details →
+                  </button>
+                )}
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Item Detail View Popover Modal */}
+      {selectedItem && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-xl relative animate-in fade-in zoom-in-95 duration-150">
+            <button onClick={() => setSelectedItem(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 font-bold text-lg">✕</button>
+            
+            {selectedItem.image_url && <img src={selectedItem.image_url} alt={selectedItem.title} className="w-full h-48 object-cover rounded-2xl mb-4" />}
+            <h2 className="text-xl font-bold text-gray-900 mb-1">{selectedItem.title}</h2>
+            <div className="flex gap-2 mb-4">
+              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded">📍 {selectedItem.building_block}</span>
+              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded">📦 {selectedItem.category}</span>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-6 leading-relaxed">{selectedItem.description}</p>
+            
+            <div className="flex flex-col gap-2">
+              {selectedItem.whatsapp_number && (
+                <a
+                  href={`https://wa.me/${selectedItem.whatsapp_number.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 text-center text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl uppercase tracking-wider"
+                >
+                  💬 Chat on WhatsApp
+                </a>
+              )}
+              <button
+                onClick={() => handleProtectedAction(() => initiateTransaction(selectedItem))}
+                className="w-full py-2.5 text-xs font-bold bg-[#5B8C72] hover:bg-[#5B8C72]/90 text-white rounded-xl uppercase tracking-wider"
+              >
+                {selectedItem.listing_type === 'Swap' ? '🔄 Lock Swap Deal' : '🛒 Buy This Item'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
