@@ -9,6 +9,7 @@ export default function NewListingPage() {
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('')
   const [listingType, setListingType] = useState('Swap') // 'Swap' or 'Buy'
+  const [category, setCategory] = useState('Electronics') // Default category choice
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -21,27 +22,25 @@ export default function NewListingPage() {
     setErrorMessage('')
 
     try {
-      // 1. Fetch current authenticated user session metadata
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError || !user) throw new Error('You must be logged in to create a post.')
 
-      // 2. Insert record into the items table
+      // Insert record including the required category column
       const { error } = await supabase
         .from('items')
         .insert([
           {
             title,
             description,
+            category,
             price: listingType === 'Swap' ? 0 : parseFloat(price) || 0,
             listing_type: listingType,
             owner_id: user.id
           }
         ])
-        .select()
 
       if (error) throw error
 
-      // 3. Take them right back to the marketplace to see their post live!
       router.push('/dashboard')
     } catch (err: any) {
       setErrorMessage(err.message || 'Something went wrong while posting.')
@@ -74,6 +73,21 @@ export default function NewListingPage() {
             onChange={(e) => setTitle(e.target.value)}
             className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] bg-white"
           />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Category</label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] bg-white"
+          >
+            <option value="Electronics">Electronics</option>
+            <option value="Books">Books & Textbooks</option>
+            <option value="Lab Gear">Lab Gear & Aprons</option>
+            <option value="Hostel Essentials">Hostel Essentials</option>
+            <option value="Other">Other</option>
+          </select>
         </div>
 
         <div>
@@ -124,7 +138,7 @@ export default function NewListingPage() {
           <textarea
             rows={4}
             required
-            placeholder="Describe your item condition, block location, or preferred trade item options..."
+            placeholder="Describe your item condition, block location, or preferred trade options..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] resize-none bg-white"
