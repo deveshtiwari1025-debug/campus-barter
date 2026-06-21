@@ -142,6 +142,24 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
+      {/* Local high-priority CSS overrides to guarantee text remains black */}
+      <style jsx global>{`
+        #forced-search-input {
+          color: #000000 !important;
+          background-color: #ffffff !important;
+        }
+        #forced-search-input::placeholder {
+          color: #4b5563 !important;
+          opacity: 1 !important;
+        }
+        #forced-search-input:-ms-input-placeholder {
+          color: #4b5563 !important;
+        }
+        #forced-search-input::-ms-input-placeholder {
+          color: #4b5563 !important;
+        }
+      `}</style>
+
       {/* Top Segmented Navigation Tabs */}
       <div className="flex justify-center border-b border-gray-100 mb-6 gap-8 text-sm font-semibold">
         <button 
@@ -161,16 +179,12 @@ export default function DashboardPage() {
       {/* Control Utility Row */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
         <input
+          id="forced-search-input"
           type="text"
           placeholder="Search items..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          // Using direct inline styles to override any global stylesheets completely
-          style={{
-             color: '#000000',
-             backgroundColor: '#ffffff',
-          }}
-          className="w-full sm:max-w-md px-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none placeholder-gray-500 font-medium"
+          className="w-full sm:max-w-md px-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none font-medium"
         />
         
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
