@@ -10,7 +10,9 @@ export default function NewListingPage() {
   const [price, setPrice] = useState('')
   const [listingType, setListingType] = useState('Swap') // 'Swap' or 'Buy'
   const [category, setCategory] = useState('Electronics')
-  const [buildingBlock, setBuildingBlock] = useState('A Block') // Default block selection
+  const [buildingBlock, setBuildingBlock] = useState('A Block')
+  const [whatsappNumber, setWhatsappNumber] = useState('')
+  const [imageUrl, setImageUrl] = useState('') // Matches the nullable image_url column
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -23,10 +25,11 @@ export default function NewListingPage() {
     setErrorMessage('')
 
     try {
+      // 1. Authenticate user session
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError || !user) throw new Error('You must be logged in to create a post.')
 
-      // Insert record including both required category and building_block columns
+      // 2. Insert payload mapping exactly to your Supabase schema columns
       const { error } = await supabase
         .from('items')
         .insert([
@@ -35,14 +38,17 @@ export default function NewListingPage() {
             description,
             category,
             building_block: buildingBlock,
+            whatsapp_number: whatsappNumber,
             price: listingType === 'Swap' ? 0 : parseFloat(price) || 0,
             listing_type: listingType,
-            owner_id: user.id
+            owner_id: user.id,
+            image_url: imageUrl.trim() || null // Sends valid text string or defaults nicely to null
           }
         ])
 
       if (error) throw error
 
+      // 3. Take them back to marketplace wall
       router.push('/dashboard')
     } catch (err: any) {
       setErrorMessage(err.message || 'Something went wrong while posting.')
@@ -55,7 +61,7 @@ export default function NewListingPage() {
     <div className="max-w-xl mx-auto bg-white border border-gray-100 rounded-2xl shadow-sm p-6 sm:p-8 mt-4">
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-800">List an Item</h1>
-        <p className="text-xs text-gray-500">Post your textbooks, tools, or items for trade around blocks.</p>
+        <p className="text-xs text-gray-500">Post your items or trades securely to your campus community.</p>
       </div>
 
       {errorMessage && (
@@ -94,7 +100,7 @@ export default function NewListingPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Hostel Block / Location</label>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Hostel Block Location</label>
             <select
               value={buildingBlock}
               onChange={(e) => setBuildingBlock(e.target.value)}
@@ -108,6 +114,31 @@ export default function NewListingPage() {
               <option value="F Block">F Block</option>
               <option value="Day Scholar">Day Scholar</option>
             </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">WhatsApp Contact Number</label>
+            <input
+              type="tel"
+              required
+              placeholder="e.g., 9876543210"
+              value={whatsappNumber}
+              onChange={(e) => setWhatsappNumber(e.target.value)}
+              className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] bg-white"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Item Image URL (Optional)</label>
+            <input
+              type="url"
+              placeholder="https://example.com/image.jpg"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] bg-white"
+            />
           </div>
         </div>
 
@@ -159,7 +190,7 @@ export default function NewListingPage() {
           <textarea
             rows={4}
             required
-            placeholder="Describe your item condition, room details, or preferred trade options..."
+            placeholder="Describe item condition, precise swap requirements, or meet-up timing options..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] resize-none bg-white"
