@@ -12,12 +12,23 @@ export default function NewListingPage() {
   const [category, setCategory] = useState('Electronics')
   const [buildingBlock, setBuildingBlock] = useState('A Block')
   const [whatsappNumber, setWhatsappNumber] = useState('')
-  const [imageUrl, setImageUrl] = useState('') // Matches the nullable image_url column
+  const [wantedInExchange, setWantedInExchange] = useState('')
+  
+  // Image upload states
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
   const router = useRouter()
   const supabase = createClient()
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setImageFile(e.target.files[0])
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,7 +40,31 @@ export default function NewListingPage() {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError || !user) throw new Error('You must be logged in to create a post.')
 
-      // 2. Insert payload mapping exactly to your Supabase schema columns
+      let uploadedImageUrl = null
+
+      // 2. Upload file to Supabase Storage if an image was picked
+      if (imageFile) {
+        setUploadingImage(true)
+        const fileExt = imageFile.name.split('.').pop()
+        const fileName = `${user.id}-${Date.now()}.${fileExt}`
+        const filePath = `${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('item-images')
+          .upload(filePath, imageFile)
+
+        if (uploadError) throw uploadError
+
+        // Get public downloadable URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('item-images')
+          .getPublicUrl(filePath)
+          
+        uploadedImageUrl = publicUrl
+        setUploadingImage(false)
+      }
+
+      // 3. Insert listing into the items relation
       const { error } = await supabase
         .from('items')
         .insert([
@@ -39,21 +74,23 @@ export default function NewListingPage() {
             category,
             building_block: buildingBlock,
             whatsapp_number: whatsappNumber,
+            wanted_in_exchange: wantedInExchange.trim() || null,
             price: listingType === 'Swap' ? 0 : parseFloat(price) || 0,
             listing_type: listingType,
             owner_id: user.id,
-            image_url: imageUrl.trim() || null // Sends valid text string or defaults nicely to null
+            image_url: uploadedImageUrl,
+            status: 'available'
           }
         ])
 
       if (error) throw error
 
-      // 3. Take them back to marketplace wall
       router.push('/dashboard')
     } catch (err: any) {
       setErrorMessage(err.message || 'Something went wrong while posting.')
     } finally {
       setSubmitting(false)
+      setUploadingImage(false)
     }
   }
 
@@ -61,7 +98,7 @@ export default function NewListingPage() {
     <div className="max-w-xl mx-auto bg-white border border-gray-100 rounded-2xl shadow-sm p-6 sm:p-8 mt-4">
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-800">List an Item</h1>
-        <p className="text-xs text-gray-500">Post your items or trades securely to your campus community.</p>
+        <p className="text-xs text-gray-500">Post items securely with real image uploads to your marketplace.</p>
       </div>
 
       {errorMessage && (
@@ -76,7 +113,7 @@ export default function NewListingPage() {
           <input
             type="text"
             required
-            placeholder="e.g., Engineering Graphics Textbook"
+            placeholder="e.g., Lab Coat or Calculator"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] bg-white"
@@ -131,13 +168,12 @@ export default function NewListingPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Item Image URL (Optional)</label>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Upload Product Image</label>
             <input
-              type="url"
-              placeholder="https://example.com/image.jpg"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] bg-white"
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#5B8C72]/10 file:text-[#5B8C72] hover:file:bg-[#5B8C72]/20 cursor-pointer"
             />
           </div>
         </div>
@@ -170,7 +206,7 @@ export default function NewListingPage() {
           </div>
         </div>
 
-        {listingType === 'Buy' && (
+        {listingType === 'Buy' ? (
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Price (₹)</label>
             <input
@@ -183,6 +219,17 @@ export default function NewListingPage() {
               className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] bg-white"
             />
           </div>
+        ) : (
+          <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Wanted Item in Exchange (Optional)</label>
+            <input
+              type="text"
+              placeholder="e.g., Looking for a Matrix Calculator or Lab Manual"
+              value={wantedInExchange}
+              onChange={(e) => setWantedInExchange(e.target.value)}
+              className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] bg-white"
+            />
+          </div>
         )}
 
         <div>
@@ -190,7 +237,7 @@ export default function NewListingPage() {
           <textarea
             rows={4}
             required
-            placeholder="Describe item condition, precise swap requirements, or meet-up timing options..."
+            placeholder="Describe your item condition, preferred meet-up times, etc..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] resize-none bg-white"
@@ -199,10 +246,10 @@ export default function NewListingPage() {
 
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || uploadingImage}
           className="w-full py-3 text-xs font-bold text-white bg-[#5B8C72] hover:bg-[#5B8C72]/90 disabled:bg-gray-300 rounded-lg transition-colors tracking-wider uppercase mt-2 shadow-sm"
         >
-          {submitting ? 'Publishing Entry...' : 'Publish Listing'}
+          {uploadingImage ? 'Uploading Image...' : submitting ? 'Publishing Entry...' : 'Publish Listing'}
         </button>
       </form>
     </div>
