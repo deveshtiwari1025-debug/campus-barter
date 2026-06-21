@@ -165,7 +165,7 @@ export default function DashboardPage() {
           placeholder="Search items..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full sm:max-w-md px-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none text-gray-900 bg-white"
+          className="w-full sm:max-w-md px-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none !text-black bg-white placeholder-gray-400"
         />
         
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
