@@ -49,9 +49,11 @@ export default function DashboardPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserSession(session)
-    })
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession()
+      setUserSession(data.session)
+    }
+    getSession()
   }, [supabase])
 
   const fetchMarketplaceItems = useCallback(async () => {
