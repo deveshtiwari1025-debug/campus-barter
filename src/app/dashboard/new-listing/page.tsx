@@ -87,6 +87,7 @@ export default function NewListingPage() {
       router.refresh()
 
       router.push('/dashboard')
+      window.location.href = '/dashboard'
     } catch (err: any) {
       setErrorMessage(err.message || 'Something went wrong while posting.')
     } finally {

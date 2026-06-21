@@ -49,6 +49,10 @@ export default function DashboardPage() {
     }
   }, [supabase])
 
+  useEffect(() => {
+    fetchMarketplaceItems()
+  }, [fetchMarketplaceItems])
+
   const filteredItems = items.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           item.description.toLowerCase().includes(searchQuery.toLowerCase())
