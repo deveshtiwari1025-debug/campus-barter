@@ -179,11 +179,11 @@ export default function DashboardPage() {
       {/* Control Utility Row */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
         <input
+          id="forced-search-input"
           type="text"
           placeholder="Search textbook, electronics, lab coats..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          // Direct inline styles force text to render black regardless of theme sheets
           style={{
             color: '#000000',
             backgroundColor: '#ffffff',
