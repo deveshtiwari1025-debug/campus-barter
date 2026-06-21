@@ -91,7 +91,7 @@ export default function SignupPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#5B8C72] text-[#2A2F2D]"
-                  placeholder="Devesh Tiwari"
+                  placeholder="e.g., John Doe"
                 />
               </div>
 
