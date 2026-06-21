@@ -184,6 +184,11 @@ export default function DashboardPage() {
           placeholder="Search items..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            color: '#000000',
+            backgroundColor: '#ffffff',
+            borderColor: '#e5e7eb'
+          }}
           className="w-full sm:max-w-md px-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none font-medium"
         />
         
