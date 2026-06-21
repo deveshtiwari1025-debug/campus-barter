@@ -84,6 +84,7 @@ export default function NewListingPage() {
         ])
 
       if (error) throw error
+      router.refresh()
 
       router.push('/dashboard')
     } catch (err: any) {
@@ -146,10 +147,14 @@ export default function NewListingPage() {
               <option value="A Block">A Block</option>
               <option value="B Block">B Block</option>
               <option value="C Block">C Block</option>
-              <option value="D Block">D Block</option>
+              <option value="D1 Block">D1 Block</option>
+              <option value="D2 Block">D2 Block</option>
               <option value="E Block">E Block</option>
-              <option value="F Block">F Block</option>
-              <option value="Day Scholar">Day Scholar</option>
+              <option value="AB1 Block">AB1 Block</option>
+              <option value="AB2 Block">AB2 Block</option>
+              <option value="AB3 Block">AB3 Block</option>
+              <option value="AB4 Block">AB4 Block</option>
+              <option value="AB5 Block">AB5 Block</option>
             </select>
           </div>
         </div>
