@@ -188,7 +188,7 @@ export default function DashboardPage() {
             color: '#000000',
             backgroundColor: '#ffffff',
           }}
-          className="w-full px-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none text-black placeholder:!text-gray-500 font-medium"
+          className="w-full px-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none !text-black placeholder:!text-gray-500 font-medium"
         />
         
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
