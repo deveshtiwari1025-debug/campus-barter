@@ -165,7 +165,12 @@ export default function DashboardPage() {
           placeholder="Search items..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full sm:max-w-md px-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none !text-black bg-white !placeholder-gray-700 font-medium"
+          // Using direct inline styles to override any global stylesheets completely
+          style={{
+             color: '#000000',
+             backgroundColor: '#ffffff',
+          }}
+          className="w-full sm:max-w-md px-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none placeholder-gray-500 font-medium"
         />
         
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
