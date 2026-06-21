@@ -9,7 +9,8 @@ export default function NewListingPage() {
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('')
   const [listingType, setListingType] = useState('Swap') // 'Swap' or 'Buy'
-  const [category, setCategory] = useState('Electronics') // Default category choice
+  const [category, setCategory] = useState('Electronics')
+  const [buildingBlock, setBuildingBlock] = useState('A Block') // Default block selection
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -25,7 +26,7 @@ export default function NewListingPage() {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError || !user) throw new Error('You must be logged in to create a post.')
 
-      // Insert record including the required category column
+      // Insert record including both required category and building_block columns
       const { error } = await supabase
         .from('items')
         .insert([
@@ -33,6 +34,7 @@ export default function NewListingPage() {
             title,
             description,
             category,
+            building_block: buildingBlock,
             price: listingType === 'Swap' ? 0 : parseFloat(price) || 0,
             listing_type: listingType,
             owner_id: user.id
@@ -75,19 +77,38 @@ export default function NewListingPage() {
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Category</label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] bg-white"
-          >
-            <option value="Electronics">Electronics</option>
-            <option value="Books">Books & Textbooks</option>
-            <option value="Lab Gear">Lab Gear & Aprons</option>
-            <option value="Hostel Essentials">Hostel Essentials</option>
-            <option value="Other">Other</option>
-          </select>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] bg-white"
+            >
+              <option value="Electronics">Electronics</option>
+              <option value="Books">Books & Textbooks</option>
+              <option value="Lab Gear">Lab Gear & Aprons</option>
+              <option value="Hostel Essentials">Hostel Essentials</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Hostel Block / Location</label>
+            <select
+              value={buildingBlock}
+              onChange={(e) => setBuildingBlock(e.target.value)}
+              className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] bg-white"
+            >
+              <option value="A Block">A Block</option>
+              <option value="B Block">B Block</option>
+              <option value="C Block">C Block</option>
+              <option value="D Block">D Block</option>
+              <option value="E Block">E Block</option>
+              <option value="F Block">F Block</option>
+              <option value="Day Scholar">Day Scholar</option>
+            </select>
+          </div>
         </div>
 
         <div>
@@ -138,7 +159,7 @@ export default function NewListingPage() {
           <textarea
             rows={4}
             required
-            placeholder="Describe your item condition, block location, or preferred trade options..."
+            placeholder="Describe your item condition, room details, or preferred trade options..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] resize-none bg-white"
