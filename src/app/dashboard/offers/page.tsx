@@ -3,212 +3,117 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase'
 
-interface Offer {
-  id: string
-  item_id: string
-  buyer_id: string
-  seller_id: string
-  offer_details: string
-  status: 'pending' | 'accepted' | 'declined' | 'completed'
-  created_at: string
-  buyer_otp?: string
-  seller_otp?: string
-  items: {
-    title: string
-    owner_id: string
-    price: number | null
-    wanted_in_exchange: string | null
-  }
-  profiles: {
-    full_name: string
-    college_email: string
-  }
-}
-
 export default function OffersPage() {
-  const [incomingOffers, setIncomingOffers] = useState<Offer[]>([])
-  const [outgoingOffers, setOutgoingOffers] = useState<Offer[]>([])
+  const [debugData, setDebugData] = useState<{
+    userId: string;
+    incomingCount: number;
+    outgoingCount: number;
+    incomingError: string;
+    outgoingError: string;
+    rawIncoming: any[];
+  }>({
+    userId: '',
+    incomingCount: 0,
+    outgoingCount: 0,
+    incomingError: 'None',
+    outgoingError: 'None',
+    rawIncoming: []
+  })
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
-  async function loadOffers() {
+  async function runDiagnostics() {
     try {
       setLoading(true)
       const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) {
-        console.warn("No active user session found.")
+        setDebugData(prev => ({ ...prev, incomingError: 'No active user session found.' }))
         return
       }
 
-      // 1. Fetch incoming proposals where current user is the explicit seller_id
-      const { data: incoming, error: incomingError } = await supabase
+      // Test 1: Fetch RAW incoming offers without ANY table joins
+      const { data: incoming, error: incErr } = await supabase
         .from('offers')
-        .select(`
-          *,
-          items (title, owner_id, price, wanted_in_exchange),
-          profiles!buyer_id (full_name, college_email)
-        `)
+        .select('*')
         .eq('seller_id', user.id)
-        .order('created_at', { ascending: false })
 
-      if (incomingError) {
-        console.error("Supabase Incoming Offers Error:", incomingError.message, incomingError.details)
-      }
-
-      // 2. Fetch outgoing proposals sent by the current user
-      const { data: outgoing, error: outgoingError } = await supabase
+      // Test 2: Fetch RAW outgoing offers without ANY table joins
+      const { data: outgoing, error: outErr } = await supabase
         .from('offers')
-        .select(`
-          *,
-          items (title, owner_id, price, wanted_in_exchange),
-          profiles!buyer_id (full_name, college_email)
-        `)
+        .select('*')
         .eq('buyer_id', user.id)
-        .order('created_at', { ascending: false })
 
-      if (outgoingError) {
-        console.error("Supabase Outgoing Offers Error:", outgoingError.message, outgoingError.details)
-      }
+      setDebugData({
+        userId: user.id,
+        incomingCount: incoming ? incoming.length : 0,
+        outgoingCount: outgoing ? outgoing.length : 0,
+        incomingError: incErr ? incErr.message : 'None',
+        outgoingError: outErr ? outErr.message : 'None',
+        rawIncoming: incoming || []
+      })
 
-      if (incoming) setIncomingOffers(incoming as unknown as Offer[])
-      if (outgoing) setOutgoingOffers(outgoing as unknown as Offer[])
-    } catch (err) {
-      console.error("Unexpected dashboard page crash:", err)
+    } catch (err: any) {
+      console.error(err)
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    loadOffers()
+    runDiagnostics()
   }, [supabase])
 
-  const handleUpdateStatus = async (offerId: string, nextStatus: 'accepted' | 'declined') => {
-    const { error } = await supabase
-      .from('offers')
-      .update({ status: nextStatus })
-      .eq('id', offerId)
-
-    if (error) {
-      alert(`Failed to update deal status: ${error.message}`)
-    } else {
-      loadOffers()
-    }
-  }
-
-  if (loading) return <div className="text-center py-12 text-[#6B85A0]">Loading trade dashboard...</div>
+  if (loading) return <div className="p-8 text-center">Running system diagnostics...</div>
 
   return (
-    <div className="space-y-12 max-w-5xl mx-auto p-4">
-      {/* Section A: Incoming Barter Proposals */}
+    <div className="max-w-2xl mx-auto p-6 my-8 bg-slate-900 text-green-400 font-mono rounded-2xl shadow-xl border border-slate-800 text-sm space-y-4">
+      <h2 className="text-xl font-bold text-white border-b border-slate-700 pb-2">🛠️ System Diagnostic Dashboard</h2>
+      
       <div>
-        <h2 className="text-xl font-bold text-[#2A2F2D] mb-4">Incoming Offers</h2>
-        {incomingOffers.length === 0 ? (
-          <div className="bg-white p-6 rounded-xl border border-dashed border-gray-300 text-center text-[#6B85A0] text-sm">
-            No trade proposals have been received for your campus listings yet.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {incomingOffers.map((offer) => (
-              <div key={offer.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-4">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                        offer.status === 'accepted' ? 'bg-green-100 text-green-800' :
-                        offer.status === 'completed' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-700'
-                      }`}>{offer.status}</span>
-                      <span className="text-sm font-bold text-[#2A2F2D]">Item: {offer.items?.title}</span>
-                    </div>
-                    {offer.offer_details && (
-                      <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md border border-gray-100 italic">
-                        "{offer.offer_details}"
-                      </p>
-                    )}
-                    <p className="text-xs text-[#6B85A0]">
-                      Proposed by <span className="font-medium text-[#2A2F2D]">{offer.profiles?.full_name || 'Unknown User'}</span> ({offer.profiles?.college_email || 'No Email'})
-                    </p>
-                  </div>
-
-                  {offer.status === 'pending' && (
-                    <div className="flex items-center space-x-2 self-end md:self-center">
-                      <button
-                        onClick={() => handleUpdateStatus(offer.id, 'accepted')}
-                        className="px-4 py-1.5 bg-[#5B8C72] text-white text-xs font-medium rounded hover:bg-[#5B8C72]/90 transition-colors"
-                      >
-                        Accept Trade
-                      </button>
-                      <button
-                        onClick={() => handleUpdateStatus(offer.id, 'declined')}
-                        className="px-4 py-1.5 bg-red-50 text-red-600 text-xs font-medium rounded hover:bg-red-100 transition-colors"
-                      >
-                        Decline
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Secure Handshake verification block for Seller */}
-                {(offer.status === 'accepted' || offer.status === 'completed') && (
-                  <div className="mt-2 p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
-                    <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wide">🤝 Secure Handshake Active</h4>
-                    <p className="text-xs text-amber-700">Exchange codes with the student in person to settle the transaction.</p>
-                    <div className="flex items-center space-x-6 pt-1">
-                      <div>
-                        <span className="block text-[10px] uppercase font-bold text-gray-400">Your Code (Give to Buyer)</span>
-                        <span className="text-lg font-mono font-bold text-amber-900">{offer.seller_otp || '------'}</span>
-                      </div>
-                      <div className="border-l border-amber-300 h-8"></div>
-                      <div>
-                        <span className="block text-[10px] uppercase font-bold text-gray-400">Expected Buyer Code</span>
-                        <span className="text-lg font-mono font-bold text-gray-600">{offer.buyer_otp || '------'}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        <span className="text-gray-400">Your Auth User ID:</span>
+        <p className="text-white bg-slate-800 p-2 rounded mt-1 text-xs break-all">{debugData.userId || "Not Logged In"}</p>
       </div>
 
-      {/* Section B: Outgoing Trade Trackers */}
-      <div>
-        <h2 className="text-xl font-bold text-[#2A2F2D] mb-4">Sent Proposals</h2>
-        {outgoingOffers.length === 0 ? (
-          <div className="bg-white p-6 rounded-xl border border-dashed border-gray-300 text-center text-[#6B85A0] text-sm">
-            You haven't initiated any trade proposals to other students yet.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {outgoingOffers.map((offer) => (
-              <div key={offer.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-bold text-[#2A2F2D]">Target Item: {offer.items?.title}</h3>
-                  {offer.offer_details && <p className="text-sm text-gray-500 italic">Your message: "{offer.offer_details}"</p>}
-                  <p className="text-xs text-[#6B85A0]">Sent on {new Date(offer.created_at).toLocaleDateString()}</p>
-                </div>
-                
-                <div className="flex flex-col items-end gap-2">
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
-                    offer.status === 'accepted' ? 'bg-green-100 text-green-800' :
-                    offer.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                    offer.status === 'declined' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {offer.status}
-                  </span>
-                  {(offer.status === 'accepted' || offer.status === 'completed') && (
-                    <span className="text-xs font-mono bg-amber-50 border border-amber-200 px-2 py-1 rounded text-amber-900 font-bold">
-                      Your Verification Code: {offer.buyer_otp}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
+          <span className="text-gray-400 block text-xs">RAW INCOMING OFFERS</span>
+          <span className="text-2xl font-bold text-white">{debugData.incomingCount} rows</span>
+        </div>
+        <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
+          <span className="text-gray-400 block text-xs">RAW OUTGOING OFFERS</span>
+          <span className="text-2xl font-bold text-white">{debugData.outgoingCount} rows</span>
+        </div>
       </div>
+
+      <div className="space-y-2">
+        <div>
+          <span className="text-gray-400 block text-xs">Incoming Query Error Status:</span>
+          <p className={`p-2 rounded text-xs ${debugData.incomingError === 'None' ? 'bg-emerald-950/50 text-emerald-400' : 'bg-red-950 text-red-400'}`}>
+            {debugData.incomingError}
+          </p>
+        </div>
+        <div>
+          <span className="text-gray-400 block text-xs">Outgoing Query Error Status:</span>
+          <p className={`p-2 rounded text-xs ${debugData.outgoingError === 'None' ? 'bg-emerald-950/50 text-emerald-400' : 'bg-red-950 text-red-400'}`}>
+            {debugData.outgoingError}
+          </p>
+        </div>
+      </div>
+
+      <div>
+        <span className="text-gray-400 block text-xs mb-1">Raw Database Payloads Received:</span>
+        <pre className="bg-black/50 p-4 rounded-xl text-xs overflow-x-auto text-gray-300 max-h-48 scrollbar-thin">
+          {JSON.stringify(debugData.rawIncoming, null, 2)}
+        </pre>
+      </div>
+
+      <button 
+        onClick={runDiagnostics}
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-sans font-bold py-2.5 rounded-xl transition-all uppercase text-xs tracking-wider"
+      >
+        🔄 Force Re-Check Database
+      </button>
     </div>
   )
 }
