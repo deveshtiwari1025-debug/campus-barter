@@ -3,31 +3,9 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase'
 
-interface Offer {
-  id: string
-  item_id: string
-  buyer_id: string
-  seller_id: string
-  offer_details: string
-  status: 'pending' | 'accepted' | 'declined' | 'completed'
-  created_at: string
-  buyer_otp: string
-  seller_otp: string
-  items: {
-    title: string
-    owner_id: string
-    price: number | null
-    wanted_in_exchange: string | null
-  } | null
-  profiles: {
-    full_name: string
-    college_email: string
-  } | null
-}
-
 export default function OffersPage() {
-  const [incomingOffers, setIncomingOffers] = useState<Offer[]>([])
-  const [outgoingOffers, setOutgoingOffers] = useState<Offer[]>([])
+  const [incomingOffers, setIncomingOffers] = useState<any[]>([])
+  const [outgoingOffers, setOutgoingOffers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
@@ -37,69 +15,74 @@ export default function OffersPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // 1. Fetch raw offers data directly (Guaranteed to work based on diagnostics)
+      // 1. Fetch raw offers directly from the database table
       const { data: rawIncoming } = await supabase
         .from('offers')
         .select('*')
         .eq('seller_id', user.id)
-        .order('created_at', { ascending: false })
 
       const { data: rawOutgoing } = await supabase
         .from('offers')
         .select('*')
         .eq('buyer_id', user.id)
-        .order('created_at', { ascending: false })
 
       const incomingList = rawIncoming || []
       const outgoingList = rawOutgoing || []
 
-      // 2. Gather all unique item and profile IDs needed for this page
-      const allItemIds = Array.from(new Set([...incomingList.map(o => o.item_id), ...outgoingList.map(o => o.item_id)]))
-      const allBuyerIds = Array.from(new Set([...incomingList.map(o => o.buyer_id), ...outgoingList.map(o => o.buyer_id)]))
+      // 2. Gather unique IDs for matching items and participant profiles
+      const allItemIds = Array.from(new Set([
+        ...incomingList.map((o: any) => o.item_id),
+        ...outgoingList.map((o: any) => o.item_id)
+      ])).filter(Boolean)
 
-      // 3. Fetch details individually to completely bypass missing foreign key relation errors
-      let itemsMap: Record<string, any> = {}
-      let profilesMap: Record<string, any> = {}
+      const allProfileIds = Array.from(new Set([
+        ...incomingList.map((o: any) => o.buyer_id),
+        ...incomingList.map((o: any) => o.seller_id),
+        ...outgoingList.map((o: any) => o.buyer_id),
+        ...outgoingList.map((o: any) => o.seller_id)
+      ])).filter(Boolean)
 
+      const itemsMap: Record<string, any> = {}
+      const profilesMap: Record<string, any> = {}
+
+      // 3. Populate matching information stores individually
       if (allItemIds.length > 0) {
         const { data: itemsData } = await supabase
           .from('items')
           .select('id, title, owner_id, price, wanted_in_exchange')
           .in('id', allItemIds)
-        
         if (itemsData) {
-          itemsData.forEach(item => { itemsMap[item.id] = item })
+          itemsData.forEach((item: any) => { itemsMap[item.id] = item })
         }
       }
 
-      if (allBuyerIds.length > 0) {
+      if (allProfileIds.length > 0) {
         const { data: profilesData } = await supabase
           .from('profiles')
           .select('id, full_name, college_email')
-          .in('id', allBuyerIds)
-        
+          .in('id', allProfileIds)
         if (profilesData) {
-          profilesData.forEach(profile => { profilesMap[profile.id] = profile })
+          profilesData.forEach((profile: any) => { profilesMap[profile.id] = profile })
         }
       }
 
-      // 4. Combine raw data with lookup details in client-side memory
-      const mappedIncoming = incomingList.map(offer => ({
+      // 4. Client-side dataset binding to completely bypass compilation friction
+      const mappedIncoming = incomingList.map((offer: any) => ({
         ...offer,
-        items: itemsMap[offer.item_id] || { title: 'Unknown Product Item', owner_id: '', price: 0, wanted_in_exchange: null },
-        profiles: profilesMap[offer.buyer_id] || { full_name: 'Campus Student', college_email: 'Student Email' }
-      })) as Offer[]
+        items: itemsMap[offer.item_id] || { title: 'Item details unavailable', owner_id: '', price: 0, wanted_in_exchange: null },
+        profiles: profilesMap[offer.buyer_id] || { full_name: 'Campus Student', college_email: 'Contact via WhatsApp' }
+      }))
 
-      const mappedOutgoing = outgoingList.map(offer => ({
+      const mappedOutgoing = outgoingList.map((offer: any) => ({
         ...offer,
-        items: itemsMap[offer.item_id] || { title: 'Unknown Product Item', owner_id: '', price: 0, wanted_in_exchange: null },
-        profiles: profilesMap[offer.buyer_id] || { full_name: 'Campus Student', college_email: 'Student Email' }
-      })) as Offer[]
+        items: itemsMap[offer.item_id] || { title: 'Item details unavailable', owner_id: '', price: 0, wanted_in_exchange: null },
+        profiles: profilesMap[offer.seller_id] || { full_name: 'Campus Seller', college_email: 'Contact via WhatsApp' }
+      }))
 
       setIncomingOffers(mappedIncoming)
       setOutgoingOffers(mappedOutgoing)
     } catch (err) {
-      console.error("Dashboard stitching error:", err)
+      console.error("Dashboard data assembly error:", err)
     } finally {
       setLoading(false)
     }
@@ -116,7 +99,7 @@ export default function OffersPage() {
       .eq('id', offerId)
 
     if (error) {
-      alert(`Failed to update deal status: ${error.message}`)
+      alert(`Failed to update status: ${error.message}`)
     } else {
       loadOffers()
     }
@@ -126,7 +109,7 @@ export default function OffersPage() {
 
   return (
     <div className="space-y-12 max-w-5xl mx-auto p-4">
-      {/* Section A: Incoming Barter Proposals */}
+      {/* Section A: Incoming Trade Proposals */}
       <div>
         <h2 className="text-xl font-bold text-[#2A2F2D] mb-4">Incoming Offers</h2>
         {incomingOffers.length === 0 ? (
@@ -174,11 +157,11 @@ export default function OffersPage() {
                   )}
                 </div>
 
-                {/* Secure Handshake verification block for Seller */}
+                {/* Secure Verification Handshake Panel */}
                 {(offer.status === 'accepted' || offer.status === 'completed') && (
                   <div className="mt-2 p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
                     <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wide">🤝 Secure Handshake Active</h4>
-                    <p className="text-xs text-amber-700">Exchange codes with the student in person to settle the transaction.</p>
+                    <p className="text-xs text-amber-700">Exchange verification codes with the other student in person to close out the deal.</p>
                     <div className="flex items-center space-x-6 pt-1">
                       <div>
                         <span className="block text-[10px] uppercase font-bold text-gray-400">Your Code (Give to Buyer)</span>
@@ -198,7 +181,7 @@ export default function OffersPage() {
         )}
       </div>
 
-      {/* Section B: Outgoing Trade Trackers */}
+      {/* Section B: Sent Outgoing Trade Trackers */}
       <div>
         <h2 className="text-xl font-bold text-[#2A2F2D] mb-4">Sent Proposals</h2>
         {outgoingOffers.length === 0 ? (
@@ -212,7 +195,7 @@ export default function OffersPage() {
                 <div className="space-y-1">
                   <h3 className="text-sm font-bold text-[#2A2F2D]">Target Item: {offer.items?.title}</h3>
                   {offer.offer_details && <p className="text-sm text-gray-500 italic">Your message: "{offer.offer_details}"</p>}
-                  <p className="text-xs text-[#6B85A0]">Sent on {new Date(offer.created_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-[#6B85A0]">Owner: {offer.profiles?.full_name || 'Campus Seller'}</p>
                 </div>
                 
                 <div className="flex flex-col items-end gap-2">
