@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase'
 
@@ -14,8 +14,9 @@ export default function NewListingPage() {
   const [whatsappNumber, setWhatsappNumber] = useState('')
   const [wantedInExchange, setWantedInExchange] = useState('')
   
-  // Multi-Image upload states
+  // Multi-Image upload and preview states
   const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [previews, setPreviews] = useState<string[]>([])
   const [uploadingImage, setUploadingImage] = useState(false)
   
   const [submitting, setSubmitting] = useState(false)
@@ -26,10 +27,30 @@ export default function NewListingPage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      // Convert FileList to a standard array
-      setImageFiles(Array.from(e.target.files))
+      const filesArray = Array.from(e.target.files)
+      setImageFiles(filesArray)
+
+      // Generate object URLs for immediate image previews
+      const previewUrls = filesArray.map((file) => URL.createObjectURL(file))
+      setPreviews(previewUrls)
     }
   }
+
+  // Remove a specific image from both the file array and preview array
+  const handleRemoveImage = (indexToRemove: number) => {
+    setImageFiles((prev) => prev.filter((_, index) => index !== indexToRemove))
+    
+    // Revoke the URL to free up browser memory, then filter it out
+    URL.revokeObjectURL(previews[indexToRemove])
+    setPreviews((prev) => prev.filter((_, index) => index !== indexToRemove))
+  }
+
+  // Clean up object URLs if the component unmounts to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      previews.forEach((url) => URL.revokeObjectURL(url))
+    }
+  }, [previews])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,7 +71,6 @@ export default function NewListingPage() {
         for (let i = 0; i < imageFiles.length; i++) {
           const file = imageFiles[i]
           const fileExt = file.name.split('.').pop()
-          // Append loop index to keep file paths unique
           const fileName = `${user.id}-${Date.now()}-${i}.${fileExt}`
           const filePath = `${fileName}`
 
@@ -84,8 +104,8 @@ export default function NewListingPage() {
             price: listingType === 'Swap' ? 0 : parseFloat(price) || 0,
             listing_type: listingType,
             owner_id: user.id,
-            image_url: uploadedImageUrls[0] || null, // Primary image fallback for old layouts
-            image_urls: uploadedImageUrls,          // Stores your array of strings
+            image_url: uploadedImageUrls[0] || null, // Primary fallback image
+            image_urls: uploadedImageUrls,          // Array of all strings
             status: 'available'
           }
         ])
@@ -196,6 +216,32 @@ export default function NewListingPage() {
             )}
           </div>
         </div>
+
+        {/* IMAGE PREVIEW AND DELETE SELECTION GRID */}
+        {previews.length > 0 && (
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Selected Images Preview (Click X to remove)</label>
+            <div className="grid grid-cols-4 gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
+              {previews.map((url, index) => (
+                <div key={url} className="relative aspect-square w-full rounded-lg overflow-hidden border border-gray-200 group bg-white shadow-sm">
+                  <img 
+                    src={url} 
+                    alt="Preview layout" 
+                    className="object-cover w-full h-full"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveImage(index)}
+                    className="absolute top-1 right-1 bg-red-500/95 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow transition-colors"
+                    title="Remove this image"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div>
           <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Listing Strategy Type</label>
