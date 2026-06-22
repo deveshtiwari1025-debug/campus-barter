@@ -15,6 +15,7 @@ interface Item {
   wanted_in_exchange: string | null
   whatsapp_number: string
   image_url: string | null
+  image_urls: string[] | null // Added support for multi-image arrays
   status: string
   owner_id: string
   created_at: string
@@ -40,6 +41,7 @@ export default function DashboardPage() {
   const [userSession, setUserSession] = useState<any>(null)
 
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
+  const [currentImageIndex, setCurrentImageIndex] = useState<number>(0) // Carousel image index controller
   const [activeHandshake, setActiveHandshake] = useState<Offer | null>(null)
   const [inputBuyerOtp, setInputBuyerOtp] = useState('')
   const [inputSellerOtp, setInputSellerOtp] = useState('')
@@ -47,6 +49,11 @@ export default function DashboardPage() {
 
   const router = useRouter()
   const supabase = createClient()
+
+  // Reset the slideshow index to the first image whenever a user opens a different item card
+  useEffect(() => {
+    setCurrentImageIndex(0)
+  }, [selectedItem])
 
   useEffect(() => {
     const getSession = async () => {
@@ -349,7 +356,6 @@ export default function DashboardPage() {
                     >
                       {item.status === 'sold' ? 'Sold Out' : 'Active'}
                     </span>
-                    {/* ── EDIT BUTTON ADDED HERE ── */}
                     <button
                       onClick={() => router.push(`/dashboard/items/${item.id}/edit`)}
                       className="px-3 py-1.5 text-xs font-bold text-[#5B8C72] bg-[#5B8C72]/10 rounded-lg hover:bg-[#5B8C72]/20"
@@ -383,19 +389,73 @@ export default function DashboardPage() {
           <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-xl relative">
             <button
               onClick={() => setSelectedItem(null)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 font-bold text-lg"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 font-bold text-lg z-10"
             >
               ✕
             </button>
 
-            {selectedItem.image_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={selectedItem.image_url}
-                alt={selectedItem.title}
-                className="w-full h-48 object-cover rounded-2xl mb-4"
-              />
-            )}
+            {/* MULTI-IMAGE SLIDESHOW REPLACEMENT COMPONENT */}
+            {(() => {
+              const urls = selectedItem.image_urls && selectedItem.image_urls.length > 0
+                ? selectedItem.image_urls
+                : selectedItem.image_url ? [selectedItem.image_url] : [];
+
+              if (urls.length === 0) return null;
+
+              return (
+                <div className="relative w-full h-48 mb-4 overflow-hidden rounded-2xl border border-gray-100 bg-gray-50 group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={urls[currentImageIndex]}
+                    alt={`${selectedItem.title} - Preview ${currentImageIndex + 1}`}
+                    className="w-full h-full object-cover transition-all duration-300"
+                  />
+
+                  {urls.length > 1 && (
+                    <>
+                      {/* Left Navigation Arrow */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentImageIndex((prev) => (prev === 0 ? urls.length - 1 : prev - 1));
+                        }}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/45 hover:bg-black/60 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs transition-colors shadow-sm select-none"
+                      >
+                        ❮
+                      </button>
+
+                      {/* Right Navigation Arrow */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentImageIndex((prev) => (prev === urls.length - 1 ? 0 : prev + 1));
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/45 hover:bg-black/60 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs transition-colors shadow-sm select-none"
+                      >
+                        ❯
+                      </button>
+
+                      {/* Dot Pagination Tracker */}
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 bg-black/25 px-2.5 py-1 rounded-full backdrop-blur-[2px]">
+                        {urls.map((_, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setCurrentImageIndex(idx)}
+                            className={`w-1.5 h-1.5 rounded-full transition-all ${
+                              currentImageIndex === idx ? 'bg-white w-3' : 'bg-white/50'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
+
             <h2 className="text-xl font-bold text-gray-900 mb-1">{selectedItem.title}</h2>
             <div className="flex gap-2 mb-4 flex-wrap">
               <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded">
