@@ -349,6 +349,13 @@ export default function DashboardPage() {
                     >
                       {item.status === 'sold' ? 'Sold Out' : 'Active'}
                     </span>
+                    {/* ── EDIT BUTTON ADDED HERE ── */}
+                    <button
+                      onClick={() => router.push(`/dashboard/items/${item.id}/edit`)}
+                      className="px-3 py-1.5 text-xs font-bold text-[#5B8C72] bg-[#5B8C72]/10 rounded-lg hover:bg-[#5B8C72]/20"
+                    >
+                      Edit
+                    </button>
                     <button
                       onClick={() => deleteItem(item.id)}
                       className="px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 rounded-lg hover:bg-red-100"
