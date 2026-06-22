@@ -12,12 +12,26 @@ interface Item {
   price: number | null
   status: 'available' | 'archived'
   created_at: string
+  description?: string
+  building_block?: string
+  whatsapp_number?: string
+  image_url?: string
 }
 
 export default function MyListingsPage() {
   const [myItems, setMyItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
+
+  // Edit Feature States
+  const [editingItem, setEditingItem] = useState<Item | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editCategory, setEditCategory] = useState('')
+  const [editListingType, setEditListingType] = useState<'swap' | 'buy' | 'both'>('swap')
+  const [editPrice, setEditPrice] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editBuildingBlock, setEditBuildingBlock] = useState('')
+  const [editWhatsappNumber, setEditWhatsappNumber] = useState('')
 
   async function fetchMyInventory() {
     setLoading(true)
@@ -26,7 +40,7 @@ export default function MyListingsPage() {
     if (user) {
       const { data, error } = await supabase
         .from('items')
-        .select('id, title, category, listing_type, price, status, created_at')
+        .select('id, title, category, listing_type, price, status, created_at, description, building_block, whatsapp_number, image_url')
         .eq('owner_id', user.id)
         .order('created_at', { ascending: false })
 
@@ -40,6 +54,44 @@ export default function MyListingsPage() {
   useEffect(() => {
     fetchMyInventory()
   }, [supabase])
+
+  // Open Edit Modal and Pre-fill details
+  const startEdit = (item: Item) => {
+    setEditingItem(item)
+    setEditTitle(item.title || '')
+    setEditCategory(item.category || '')
+    setEditListingType(item.listing_type || 'swap')
+    setEditPrice(item.price?.toString() || '')
+    setEditDescription(item.description || '')
+    setEditBuildingBlock(item.building_block || '')
+    setEditWhatsappNumber(item.whatsapp_number || '')
+  }
+
+  // Submit UPDATE to Supabase row
+  const handleUpdateItem = async () => {
+    if (!editingItem) return
+
+    const { error } = await supabase
+      .from('items')
+      .update({
+        title: editTitle,
+        category: editCategory,
+        listing_type: editListingType,
+        price: editListingType === 'swap' ? null : (parseFloat(editPrice) || 0),
+        description: editDescription,
+        building_block: editBuildingBlock,
+        whatsapp_number: editWhatsappNumber
+      })
+      .eq('id', editingItem.id)
+
+    if (!error) {
+      alert('Listing updated successfully!')
+      setEditingItem(null)
+      fetchMyInventory()
+    } else {
+      alert(error.message)
+    }
+  }
 
   // UPDATE operation: Toggle item availability status
   const handleToggleStatus = async (itemId: string, currentStatus: 'available' | 'archived') => {
@@ -84,7 +136,7 @@ export default function MyListingsPage() {
 
       {myItems.length === 0 ? (
         <div className="bg-white p-12 rounded-card border border-dashed border-gray-300 text-center text-[#6B85A0]">
-          You haven't listed any items for swap or sale yet.
+          You haven&apos;t listed any items for swap or sale yet.
         </div>
       ) : (
         <div className="bg-white rounded-card shadow-sm border border-[#6B85A0]/10 overflow-hidden">
@@ -120,8 +172,14 @@ export default function MyListingsPage() {
                   </td>
                   <td className="px-6 py-4 text-right space-x-3">
                     <button
-                      onClick={() => handleToggleStatus(item.id, item.status)}
+                      onClick={() => startEdit(item)}
                       className="text-xs font-semibold text-[#5B8C72] hover:underline"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleToggleStatus(item.id, item.status)}
+                      className="text-xs font-semibold text-[#6B85A0] hover:underline"
                     >
                       {item.status === 'available' ? 'Archive' : 'Activate'}
                     </button>
@@ -136,6 +194,67 @@ export default function MyListingsPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* EDIT MODAL POPUP */}
+      {editingItem && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-bold text-[#2A2F2D] mb-4">Edit Listing</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-[#6B85A0] mb-1">Item Title</label>
+                <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5B8C72]" placeholder="e.g. Engineering Physics Textbook" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#6B85A0] mb-1">Category</label>
+                <input type="text" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5B8C72]" placeholder="e.g. Books, Electronics, Lab Coats" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#6B85A0] mb-1">Listing Type</label>
+                <select value={editListingType} onChange={(e) => setEditListingType(e.target.value as any)} className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5B8C72]">
+                  <option value="swap">Swap (Barter)</option>
+                  <option value="buy">Buy (Sale)</option>
+                  <option value="both">Both</option>
+                </select>
+              </div>
+
+              {editListingType !== 'swap' && (
+                <div>
+                  <label className="block text-xs font-semibold text-[#6B85A0] mb-1">Price (₹)</label>
+                  <input type="number" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5B8C72]" placeholder="Price in INR" />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-[#6B85A0] mb-1">Description / Condition</label>
+                <textarea rows={3} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5B8C72]" placeholder="Describe item condition, requirements..." />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#6B85A0] mb-1">Campus Hostel Block / Location</label>
+                <input type="text" value={editBuildingBlock} onChange={(e) => setEditBuildingBlock(e.target.value)} className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5B8C72]" placeholder="e.g. Block-A, Netaji Subhas Auditorium" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#6B85A0] mb-1">WhatsApp Contact Number</label>
+                <input type="text" value={editWhatsappNumber} onChange={(e) => setEditWhatsappNumber(e.target.value)} className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5B8C72]" placeholder="Include country code, e.g. 919876543210" />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setEditingItem(null)} className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+                  Cancel
+                </button>
+                <button type="button" onClick={handleUpdateItem} className="flex-1 py-2 bg-[#5B8C72] text-white rounded-lg text-sm font-medium hover:bg-[#5B8C72]/90 transition-colors">
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
