@@ -14,8 +14,8 @@ export default function NewListingPage() {
   const [whatsappNumber, setWhatsappNumber] = useState('')
   const [wantedInExchange, setWantedInExchange] = useState('')
   
-  // Image upload states
-  const [imageFile, setImageFile] = useState<File | null>(null)
+  // Multi-Image upload states
+  const [imageFiles, setImageFiles] = useState<File[]>([])
   const [uploadingImage, setUploadingImage] = useState(false)
   
   const [submitting, setSubmitting] = useState(false)
@@ -26,7 +26,8 @@ export default function NewListingPage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setImageFile(e.target.files[0])
+      // Convert FileList to a standard array
+      setImageFiles(Array.from(e.target.files))
     }
   }
 
@@ -40,27 +41,32 @@ export default function NewListingPage() {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError || !user) throw new Error('You must be logged in to create a post.')
 
-      let uploadedImageUrl = null
+      let uploadedImageUrls: string[] = []
 
-      // 2. Upload file to Supabase Storage if an image was picked
-      if (imageFile) {
+      // 2. Loop and upload all selected files sequentially to Supabase Storage
+      if (imageFiles.length > 0) {
         setUploadingImage(true)
-        const fileExt = imageFile.name.split('.').pop()
-        const fileName = `${user.id}-${Date.now()}.${fileExt}`
-        const filePath = `${fileName}`
+        
+        for (let i = 0; i < imageFiles.length; i++) {
+          const file = imageFiles[i]
+          const fileExt = file.name.split('.').pop()
+          // Append loop index to keep file paths unique
+          const fileName = `${user.id}-${Date.now()}-${i}.${fileExt}`
+          const filePath = `${fileName}`
 
-        const { error: uploadError } = await supabase.storage
-          .from('item-images')
-          .upload(filePath, imageFile)
+          const { error: uploadError } = await supabase.storage
+            .from('item-images')
+            .upload(filePath, file)
 
-        if (uploadError) throw uploadError
+          if (uploadError) throw uploadError
 
-        // Get public downloadable URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('item-images')
-          .getPublicUrl(filePath)
-          
-        uploadedImageUrl = publicUrl
+          // Fetch individual public downloadable URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('item-images')
+            .getPublicUrl(filePath)
+            
+          uploadedImageUrls.push(publicUrl)
+        }
         setUploadingImage(false)
       }
 
@@ -78,7 +84,8 @@ export default function NewListingPage() {
             price: listingType === 'Swap' ? 0 : parseFloat(price) || 0,
             listing_type: listingType,
             owner_id: user.id,
-            image_url: uploadedImageUrl,
+            image_url: uploadedImageUrls[0] || null, // Primary image fallback for old layouts
+            image_urls: uploadedImageUrls,          // Stores your array of strings
             status: 'available'
           }
         ])
@@ -174,13 +181,19 @@ export default function NewListingPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Upload Product Image</label>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Upload Product Images</label>
             <input
               type="file"
               accept="image/*"
+              multiple
               onChange={handleFileChange}
               className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#5B8C72]/10 file:text-[#5B8C72] hover:file:bg-[#5B8C72]/20 cursor-pointer"
             />
+            {imageFiles.length > 0 && (
+              <p className="text-[11px] text-[#5B8C72] mt-1 font-medium">
+                ✓ {imageFiles.length} files selected
+              </p>
+            )}
           </div>
         </div>
 
@@ -255,7 +268,7 @@ export default function NewListingPage() {
           disabled={submitting || uploadingImage}
           className="w-full py-3 text-xs font-bold text-white bg-[#5B8C72] hover:bg-[#5B8C72]/90 disabled:bg-gray-300 rounded-lg transition-colors tracking-wider uppercase mt-2 shadow-sm"
         >
-          {uploadingImage ? 'Uploading Image...' : submitting ? 'Publishing Entry...' : 'Publish Listing'}
+          {uploadingImage ? 'Uploading Images...' : submitting ? 'Publishing Entry...' : 'Publish Listing'}
         </button>
       </form>
     </div>
