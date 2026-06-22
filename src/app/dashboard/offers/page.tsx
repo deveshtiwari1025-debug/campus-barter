@@ -10,6 +10,8 @@ interface Offer {
   offer_details: string
   status: 'pending' | 'accepted' | 'declined'
   created_at: string
+  buyer_otp?: string;  // Added for verification
+  seller_otp?: string; // Added for verification
   items: {
     title: string
     owner_id: string
@@ -34,7 +36,7 @@ export default function OffersPage() {
     
     if (!user) return
 
-    // 1. Fetch incoming proposals where the current user owns the listing item
+    // Fetch incoming proposals where the current user owns the listing item
     const { data: incoming } = await supabase
       .from('offers')
       .select(`
@@ -45,7 +47,7 @@ export default function OffersPage() {
       .eq('items.owner_id', user.id)
       .order('created_at', { ascending: false })
 
-    // 2. Fetch outgoing proposals sent by the current user
+    // Fetch outgoing proposals sent by the current user
     const { data: outgoing } = await supabase
       .from('offers')
       .select(`
@@ -58,7 +60,7 @@ export default function OffersPage() {
 
     if (incoming) setIncomingOffers(incoming as unknown as Offer[])
     if (outgoing) setOutgoingOffers(outgoing as unknown as Offer[])
-    setLoading(false)
+    loading && setLoading(false)
   }
 
   useEffect(() => {
@@ -72,7 +74,6 @@ export default function OffersPage() {
       .eq('id', offerId)
 
     if (!error) {
-      // Re-trigger query fetch to cleanly update visual board states
       loadOffers()
     }
   }
@@ -91,34 +92,57 @@ export default function OffersPage() {
         ) : (
           <div className="space-y-4">
             {incomingOffers.map((offer) => (
-              <div key={offer.id} className="bg-white p-6 rounded-card shadow-sm border border-[#6B85A0]/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs font-semibold uppercase px-2 py-0.5 rounded bg-gray-100 text-gray-700">{offer.status}</span>
-                    <span className="text-sm font-bold text-[#2A2F2D]">Item: {offer.items?.title}</span>
+              <div key={offer.id} className="bg-white p-6 rounded-card shadow-sm border border-[#6B85A0]/10 flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <span className={`text-xs font-semibold uppercase px-2 py-0.5 rounded ${
+                        offer.status === 'accepted' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
+                      }`}>{offer.status}</span>
+                      <span className="text-sm font-bold text-[#2A2F2D]">Item: {offer.items?.title}</span>
+                    </div>
+                    <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md border border-gray-100 italic">
+                      "{offer.offer_details}"
+                    </p>
+                    <p className="text-xs text-[#6B85A0]">
+                      Proposed by <span className="font-medium text-[#2A2F2D]">{offer.profiles?.full_name}</span> ({offer.profiles?.college_email})
+                    </p>
                   </div>
-                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md border border-gray-100 italic">
-                    "{offer.offer_details}"
-                  </p>
-                  <p className="text-xs text-[#6B85A0]">
-                    Proposed by <span className="font-medium text-[#2A2F2D]">{offer.profiles?.full_name}</span> ({offer.profiles?.college_email})
-                  </p>
+
+                  {offer.status === 'pending' && (
+                    <div className="flex items-center space-x-2 self-end md:self-center">
+                      <button
+                        onClick={() => handleUpdateStatus(offer.id, 'accepted')}
+                        className="px-4 py-1.5 bg-[#5B8C72] text-white text-xs font-medium rounded hover:bg-[#5B8C72]/90 transition-colors"
+                      >
+                        Accept Trade
+                      </button>
+                      <button
+                        onClick={() => handleUpdateStatus(offer.id, 'declined')}
+                        className="px-4 py-1.5 bg-[#C97064]/10 text-[#C97064] text-xs font-medium rounded hover:bg-[#C97064]/20 transition-colors"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                {offer.status === 'pending' && (
-                  <div className="flex items-center space-x-2 self-end md:self-center">
-                    <button
-                      onClick={() => handleUpdateStatus(offer.id, 'accepted')}
-                      className="px-4 py-1.5 bg-[#5B8C72] text-white text-xs font-medium rounded hover:bg-[#5B8C72]/90 transition-colors"
-                    >
-                      Accept Trade
-                    </button>
-                    <button
-                      onClick={() => handleUpdateStatus(offer.id, 'declined')}
-                      className="px-4 py-1.5 bg-[#C97064]/10 text-[#C97064] text-xs font-medium rounded hover:bg-[#C97064]/20 transition-colors"
-                    >
-                      Decline
-                    </button>
+                {/* Handshake Verification UI for the Seller */}
+                {offer.status === 'accepted' && (
+                  <div className="mt-2 p-4 bg-amber-50 border border-amber-200 rounded-md space-y-2">
+                    <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wide">🤝 Secure Handshake Active</h4>
+                    <p className="text-xs text-amber-700"> Give your code to the buyer to complete verification.</p>
+                    <div className="flex items-center space-x-4 pt-1">
+                      <div>
+                        <span className="block text-[10px] uppercase font-bold text-gray-500">Your Seller Code</span>
+                        <span className="text-lg font-mono font-bold text-amber-900">{offer.seller_otp || 'N/A'}</span>
+                      </div>
+                      <div className="border-l border-amber-300 h-8"></div>
+                      <div>
+                        <span className="block text-[10px] uppercase font-bold text-gray-500">Expected Buyer Code</span>
+                        <span className="text-lg font-mono font-bold text-gray-700">{offer.buyer_otp || 'Pending...'}</span>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -144,7 +168,7 @@ export default function OffersPage() {
                   <p className="text-xs text-[#6B85A0]">Sent on {new Date(offer.created_at).toLocaleDateString()}</p>
                 </div>
                 
-                <div>
+                <div className="flex flex-col items-end gap-2">
                   <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
                     offer.status === 'accepted' ? 'bg-green-100 text-green-800' :
                     offer.status === 'declined' ? 'bg-red-100 text-red-800' :
@@ -152,6 +176,9 @@ export default function OffersPage() {
                   }`}>
                     {offer.status}
                   </span>
+                  {offer.status === 'accepted' && (
+                    <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">Your OTP: {offer.buyer_otp}</span>
+                  )}
                 </div>
               </div>
             ))}
