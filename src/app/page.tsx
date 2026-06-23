@@ -22,6 +22,34 @@ interface Item {
   created_at?: string
 }
 
+// Reusable elegant inline SVG camera placeholder component
+function CameraPlaceholder() {
+  return (
+    <div className="w-full h-full bg-[#F6F8F7] flex flex-col items-center justify-center space-y-1.5 p-4 select-none">
+      <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        fill="none" 
+        viewBox="0 0 24 24" 
+        strokeWidth={1.5} 
+        stroke="currentColor" 
+        className="w-7 h-7 text-gray-400/80"
+      >
+        <path 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" 
+        />
+        <path 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" 
+        />
+      </svg>
+      <span className="text-[11px] font-medium text-gray-400">No photo uploaded</span>
+    </div>
+  )
+}
+
 export default function RootPage() {
   const router = useRouter()
   const supabase = createClient()
@@ -52,7 +80,7 @@ export default function RootPage() {
         setUser(authUser)
 
         if (authUser) {
-          // Detect user's current campus block from user metadata or related profile metadata
+          // Detect user's current campus block from user profile metadata
           let block = authUser.user_metadata?.hostel_block || authUser.user_metadata?.building_block || ''
           
           try {
@@ -303,11 +331,11 @@ export default function RootPage() {
                       className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md cursor-pointer transition-all flex flex-col justify-between space-y-2"
                     >
                       <div className="space-y-2">
-                        <div className="relative h-28 bg-[#F6F8F7] rounded-lg overflow-hidden flex items-center justify-center">
+                        <div className="relative h-40 bg-[#F6F8F7] rounded-lg overflow-hidden flex items-center justify-center">
                           {images.length > 0 ? (
                             <img src={images[0]} alt={item.title} className="w-full h-full object-cover" />
                           ) : (
-                            <span className="text-xl text-gray-300">📷</span>
+                            <CameraPlaceholder />
                           )}
                           <div className="absolute top-1 left-1">
                             <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded shadow-sm uppercase ${
@@ -351,11 +379,11 @@ export default function RootPage() {
                       className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md cursor-pointer transition-all flex flex-col justify-between space-y-2"
                     >
                       <div className="space-y-2">
-                        <div className="relative h-28 bg-[#F6F8F7] rounded-lg overflow-hidden flex items-center justify-center">
+                        <div className="relative h-40 bg-[#F6F8F7] rounded-lg overflow-hidden flex items-center justify-center">
                           {images.length > 0 ? (
                             <img src={images[0]} alt={item.title} className="w-full h-full object-cover" />
                           ) : (
-                            <span className="text-xl text-gray-300">📷</span>
+                            <CameraPlaceholder />
                           )}
                           <div className="absolute top-1 left-1">
                             <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded shadow-sm uppercase ${
@@ -429,7 +457,7 @@ export default function RootPage() {
                   className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all flex flex-col justify-between"
                 >
                   <div>
-                    <div className="relative h-44 bg-[#F6F8F7] flex items-center justify-center overflow-hidden border-b border-gray-50">
+                    <div className="relative h-40 bg-[#F6F8F7] flex items-center justify-center overflow-hidden border-b border-gray-50">
                       {images.length > 0 ? (
                         <img
                           src={images[0]}
@@ -437,10 +465,7 @@ export default function RootPage() {
                           className="w-full h-full object-cover object-center"
                         />
                       ) : (
-                        <div className="flex flex-col items-center space-y-1 text-gray-400">
-                          <span className="text-2xl">📷</span>
-                          <span className="text-[11px]">No image uploaded</span>
-                        </div>
+                        <CameraPlaceholder />
                       )}
                       
                       <div className="absolute top-2 left-2 flex flex-col gap-1">
@@ -498,7 +523,7 @@ export default function RootPage() {
             </button>
 
             {/* Carousel Slider Panel Container */}
-            <div className="relative h-64 bg-gray-100 flex items-center justify-center">
+            <div className="relative h-48 bg-gray-100 flex items-center justify-center">
               {getItemImages(selectedItem).length > 0 ? (
                 <>
                   <img
@@ -532,10 +557,7 @@ export default function RootPage() {
                   )}
                 </>
               ) : (
-                <div className="flex flex-col items-center space-y-1 text-gray-400">
-                  <span className="text-3xl">📷</span>
-                  <span className="text-xs">No product images attached</span>
-                </div>
+                <CameraPlaceholder />
               )}
             </div>
 
@@ -600,4 +622,3 @@ export default function RootPage() {
     </div>
   )
 }
-
