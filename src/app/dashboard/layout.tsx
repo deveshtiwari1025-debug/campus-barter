@@ -67,6 +67,16 @@ export default function DashboardLayout({
                 Offers Desk
               </Link>
             </nav>
+            <Link
+              href="/dashboard/wishlist"
+              className={`px-3 py-2 rounded-md transition-colors ${
+                isActive('/dashboard/wishlist')
+                  ? 'bg-[#5B8C72]/10 text-[#5B8C72]'
+                  : 'text-[#6B85A0] hover:text-[#2A2F2D] hover:bg-gray-50'
+                }`}
+            >
+              Wishlist
+            </Link>
           </div>
 
           <div className="flex items-center space-x-4">
@@ -97,6 +107,9 @@ export default function DashboardLayout({
         </Link>
         <Link href="/dashboard/offers" className={isActive('/dashboard/offers') ? 'text-[#5B8C72] font-bold' : ''}>
           Offers
+        </Link>
+        <Link href="/dashboard/wishlist" className={isActive('/dashboard/wishlist') ? 'text-[#5B8C72] font-bold' : ''}>
+          Wishlist ❤️
         </Link>
         <Link href="/dashboard/new-listing" className={isActive('/dashboard/new-listing') ? 'text-[#5B8C72] font-bold' : ''}>
           + Post

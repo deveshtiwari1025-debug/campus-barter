@@ -53,6 +53,7 @@ function CameraPlaceholder() {
 
 export default function DashboardPage() {
   const [items, setItems] = useState<Item[]>([])
+  const [wishlistedIds, setWishlistedIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [filter, setFilter] = useState<'All' | 'Swap' | 'Buy'>('All')
@@ -83,6 +84,20 @@ export default function DashboardPage() {
     getSession()
   }, [supabase])
 
+  const fetchWishlist = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('wishlists')
+        .select('item_id')
+        .eq('user_id', userId)
+
+      if (error) throw error
+      setWishlistedIds(new Set(data?.map((w) => w.item_id) || []))
+    } catch (err) {
+      console.error('Error loading wishlist mapping:', err)
+    }
+  }, [supabase])
+
   const fetchMarketplaceItems = useCallback(async () => {
     try {
       setLoading(true)
@@ -105,11 +120,60 @@ export default function DashboardPage() {
     fetchMarketplaceItems()
   }, [fetchMarketplaceItems])
 
+  useEffect(() => {
+    if (userSession?.user?.id) {
+      fetchWishlist(userSession.user.id)
+    } else {
+      setWishlistedIds(new Set())
+    }
+  }, [userSession, fetchWishlist])
+
   const handleProtectedAction = (actionCallback: () => void) => {
     if (!userSession) {
-      router.push('/signup')
+      router.push('/login')
     } else {
       actionCallback()
+    }
+  }
+
+  const toggleWishlist = async (e: React.MouseEvent, itemId: string) => {
+    e.stopPropagation()
+    if (!userSession) {
+      router.push('/login')
+      return
+    }
+
+    const userId = userSession.user.id
+    const isCurrentlyWishlisted = wishlistedIds.has(itemId)
+
+    try {
+      if (isCurrentlyWishlisted) {
+        const { error } = await supabase
+          .from('wishlists')
+          .delete()
+          .eq('user_id', userId)
+          .eq('item_id', itemId)
+
+        if (error) throw error
+        setWishlistedIds((prev) => {
+          const updated = new Set(prev)
+          updated.delete(itemId)
+          return updated
+        })
+      } else {
+        const { error } = await supabase
+          .from('wishlists')
+          .insert([{ user_id: userId, item_id: itemId }])
+
+        if (error) throw error
+        setWishlistedIds((prev) => {
+          const updated = new Set(prev)
+          updated.add(itemId)
+          return updated
+        })
+      }
+    } catch (err) {
+      console.error('Error updating wishlist state:', err)
     }
   }
 
@@ -347,7 +411,7 @@ export default function DashboardPage() {
                   <div
                     key={`newly-${item.id}`}
                     onClick={() => setSelectedItem(item)}
-                    className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer relative"
+                    className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer relative group"
                   >
                     <div className="w-full h-40 rounded-xl overflow-hidden bg-gray-50 mb-3 relative border border-gray-50">
                       {images.length > 0 ? (
@@ -356,6 +420,22 @@ export default function DashboardPage() {
                       ) : (
                         <CameraPlaceholder />
                       )}
+                      
+                      <button
+                        onClick={(e) => toggleWishlist(e, item.id)}
+                        className="absolute top-2.5 right-2.5 z-10 p-1.5 bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-white transition-all scale-100 active:scale-95"
+                      >
+                        {wishlistedIds.has(item.id) ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-red-500">
+                            <path d="M11.645 20.91l-.007-.003-.003-.001a11.4 11.4 0 01-.507-.375c-.325-.252-.776-.624-1.285-1.114-1.022-.983-2.311-2.433-3.21-4.138-.9-1.705-1.233-3.413-1.127-4.994.105-1.579.914-3.055 2.222-3.874a4.124 4.124 0 015.42.545l.624.624.624-.624a4.124 4.124 0 015.42-.545c1.308.819 2.117 2.295 2.222 3.874.106 1.581-.227 3.289-1.127 4.994-.899 1.705-2.188 3.155-3.21 4.138a11.398 11.398 0 01-1.792 1.489l-.013.01-.006.004-.004.002a.75.75 0 01-.715 0z" />
+                          </svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-gray-600 hover:text-red-500 transition-colors">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                          </svg>
+                        )}
+                      </button>
+
                       <span className={`absolute top-2.5 left-2.5 px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-wider shadow-sm ${
                         item.listing_type === 'Swap' ? 'bg-purple-100 text-purple-700' : 'bg-amber-100 text-amber-800'
                       }`}>
@@ -428,7 +508,7 @@ export default function DashboardPage() {
                 <div
                   key={item.id}
                   onClick={() => activeTab === 'Marketplace' && setSelectedItem(item)}
-                  className={`bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-all ${
+                  className={`bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-all relative group ${
                     activeTab === 'Marketplace' ? 'hover:shadow-md cursor-pointer' : ''
                   }`}
                 >
@@ -440,6 +520,24 @@ export default function DashboardPage() {
                       ) : (
                         <CameraPlaceholder />
                       )}
+
+                      {activeTab === 'Marketplace' && (
+                        <button
+                          onClick={(e) => toggleWishlist(e, item.id)}
+                          className="absolute top-2.5 right-2.5 z-10 p-1.5 bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-white transition-all scale-100 active:scale-95"
+                        >
+                          {wishlistedIds.has(item.id) ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-red-500">
+                              <path d="M11.645 20.91l-.007-.003-.003-.001a11.4 11.4 0 01-.507-.375c-.325-.252-.776-.624-1.285-1.114-1.022-.983-2.311-2.433-3.21-4.138-.9-1.705-1.233-3.413-1.127-4.994.105-1.579.914-3.055 2.222-3.874a4.124 4.124 0 015.42.545l.624.624.624-.624a4.124 4.124 0 015.42-.545c1.308.819 2.117 2.295 2.222 3.874.106 1.581-.227 3.289-1.127 4.994-.899 1.705-2.188 3.155-3.21 4.138a11.398 11.398 0 01-1.792 1.489l-.013.01-.006.004-.004.002a.75.75 0 01-.715 0z" />
+                            </svg>
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-gray-600 hover:text-red-500 transition-colors">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                            </svg>
+                          )}
+                        </button>
+                      )}
+
                       <span className={`absolute top-2.5 left-2.5 px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-wider shadow-sm ${
                         item.listing_type === 'Swap' ? 'bg-purple-100 text-purple-700' : 'bg-amber-100 text-amber-800'
                       }`}>
