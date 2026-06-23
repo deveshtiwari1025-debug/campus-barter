@@ -30,11 +30,13 @@ export default function RootPage() {
   const [items, setItems] = useState<Item[]>([])
   const [filteredItems, setFilteredItems] = useState<Item[]>([])
   const [user, setUser] = useState<any>(null)
+  const [userBlock, setUserBlock] = useState<string>('')
   const [loading, setLoading] = useState(true)
   
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState<'all' | 'swap' | 'buy'>('all')
+  const [activeCategory, setActiveCategory] = useState<string>('All')
   
   // Modal View State
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
@@ -48,6 +50,28 @@ export default function RootPage() {
         // 1. Fetch current session status securely
         const { data: { user: authUser } } = await supabase.auth.getUser()
         setUser(authUser)
+
+        if (authUser) {
+          // Detect user's current campus block from user metadata or related profile metadata
+          let block = authUser.user_metadata?.hostel_block || authUser.user_metadata?.building_block || ''
+          
+          try {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('hostel_block, building_block')
+              .eq('id', authUser.id)
+              .single()
+            if (profileData) {
+              block = profileData.hostel_block || profileData.building_block || block
+            }
+          } catch (e) {
+            console.log('Profiles check skipped or unconfigured, proceeding with session meta info.')
+          }
+          
+          if (block) {
+            setUserBlock(block)
+          }
+        }
 
         // 2. Load available items publicly from the database
         const { data: itemsData, error } = await supabase
@@ -75,7 +99,7 @@ export default function RootPage() {
     checkAuthAndLoadData()
   }, [supabase])
 
-  // Process search input and filter pill selections together
+  // Process search input, filter pills, and category selections together
   useEffect(() => {
     let output = [...items]
 
@@ -104,8 +128,14 @@ export default function RootPage() {
       )
     }
 
+    if (activeCategory !== 'All') {
+      output = output.filter(
+        (item) => item.category?.toLowerCase() === activeCategory.toLowerCase()
+      )
+    }
+
     setFilteredItems(output)
-  }, [searchQuery, activeFilter, items])
+  }, [searchQuery, activeFilter, activeCategory, items])
 
   const handleActionProtection = (actionType: 'view' | 'lock', item?: Item) => {
     if (!user) {
@@ -135,11 +165,21 @@ export default function RootPage() {
     return []
   }
 
+  // Derive localized row slices cleanly
+  const newlyListed = items.slice(0, 6)
+  const inYourBlock = userBlock
+    ? items.filter(
+        (item) =>
+          item.building_block?.toLowerCase() === userBlock.toLowerCase() ||
+          item.hostel_block?.toLowerCase() === userBlock.toLowerCase()
+      ).slice(0, 6)
+    : []
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F6F8F7] flex items-center justify-center">
         <div className="text-sm font-medium text-[#5B8C72] animate-pulse">
-          Loading CampusBarter Marketplace...
+          Loading CampusBarter Storefront...
         </div>
       </div>
     )
@@ -193,7 +233,7 @@ export default function RootPage() {
       </header>
 
       {/* Main Browse Dashboard Container */}
-      <main className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
         {/* Unified Search Control & Strategy Pill Row */}
         <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-4 md:space-y-0 md:flex md:items-center md:justify-between md:gap-4">
           <div className="relative flex-1">
@@ -240,6 +280,138 @@ export default function RootPage() {
           </div>
         </div>
 
+        {/* Curated Section Showcase Rows */}
+        <div className="space-y-8">
+          {/* Section 1: Newly Listed Showcase */}
+          {newlyListed.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-extrabold text-[#2A2F2D] flex items-center gap-1.5">
+                  <span>✨</span> Newly Listed
+                </h2>
+                <span className="text-xs font-medium text-gray-400">Fresh from campus creators</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {newlyListed.map((item) => {
+                  const images = getItemImages(item)
+                  const hasSwap = item.listing_type?.toLowerCase().includes('swap') || item.listing_type?.toLowerCase().includes('trade') || !!item.wanted_in_exchange
+
+                  return (
+                    <div
+                      key={`newly-${item.id}`}
+                      onClick={() => handleActionProtection('view', item)}
+                      className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md cursor-pointer transition-all flex flex-col justify-between space-y-2"
+                    >
+                      <div className="space-y-2">
+                        <div className="relative h-28 bg-[#F6F8F7] rounded-lg overflow-hidden flex items-center justify-center">
+                          {images.length > 0 ? (
+                            <img src={images[0]} alt={item.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-xl text-gray-300">📷</span>
+                          )}
+                          <div className="absolute top-1 left-1">
+                            <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded shadow-sm uppercase ${
+                              hasSwap ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {hasSwap ? 'Swap' : `₹${item.price || 0}`}
+                            </span>
+                          </div>
+                        </div>
+                        <h4 className="text-xs font-bold text-[#2A2F2D] line-clamp-1">{item.title}</h4>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1 border-t border-gray-50">
+                        <span className="truncate max-w-[55px]">📍 {item.building_block || item.hostel_block || 'VIT'}</span>
+                        <span className="text-[#5B8C72] font-semibold truncate max-w-[55px]">{item.category}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Section 2: In Your Block Smart Match */}
+          {user && userBlock && inYourBlock.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-extrabold text-[#2A2F2D] flex items-center gap-1.5">
+                  <span>🏠</span> In Your Block ({userBlock})
+                </h2>
+                <span className="text-xs font-medium text-gray-400">Skip the cross-campus walk</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {inYourBlock.map((item) => {
+                  const images = getItemImages(item)
+                  const hasSwap = item.listing_type?.toLowerCase().includes('swap') || item.listing_type?.toLowerCase().includes('trade') || !!item.wanted_in_exchange
+
+                  return (
+                    <div
+                      key={`block-${item.id}`}
+                      onClick={() => handleActionProtection('view', item)}
+                      className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md cursor-pointer transition-all flex flex-col justify-between space-y-2"
+                    >
+                      <div className="space-y-2">
+                        <div className="relative h-28 bg-[#F6F8F7] rounded-lg overflow-hidden flex items-center justify-center">
+                          {images.length > 0 ? (
+                            <img src={images[0]} alt={item.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-xl text-gray-300">📷</span>
+                          )}
+                          <div className="absolute top-1 left-1">
+                            <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded shadow-sm uppercase ${
+                              hasSwap ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {hasSwap ? 'Swap' : `₹${item.price || 0}`}
+                            </span>
+                          </div>
+                        </div>
+                        <h4 className="text-xs font-bold text-[#2A2F2D] line-clamp-1">{item.title}</h4>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1 border-t border-gray-50">
+                        <span className="truncate max-w-[55px]">📍 {item.building_block || item.hostel_block}</span>
+                        <span className="text-[#5B8C72] font-semibold truncate max-w-[55px]">{item.category}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Section 3: Horizontal Category Filter chips */}
+          <div className="space-y-3 border-t border-gray-100 pt-6">
+            <div className="space-y-0.5">
+              <h2 className="text-base font-extrabold text-[#2A2F2D]">🗂️ Browse by Category</h2>
+              <p className="text-xs text-gray-400">Click a chip below to quickly filter the main feed marketplace</p>
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {['All', 'Books', 'Electronics', 'Lab Gear', 'Hostel Essentials', 'Other'].map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
+                    activeCategory === cat
+                      ? 'bg-[#5B8C72] text-white border-[#5B8C72] shadow-sm'
+                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Global Catalog Subheading Context */}
+        <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
+          <h2 className="text-base font-black text-[#2A2F2D] tracking-tight uppercase">
+            {activeCategory === 'All' ? 'All Campus Listings' : `${activeCategory} Listings`}
+          </h2>
+          <span className="text-xs text-gray-400 font-bold bg-white px-2.5 py-1 rounded-md border border-gray-100">
+            {filteredItems.length} available match{filteredItems.length === 1 ? '' : 'es'}
+          </span>
+        </div>
+
         {/* Public Grid Feed Component */}
         {filteredItems.length === 0 ? (
           <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-12 text-center text-gray-400 text-sm">
@@ -282,7 +454,7 @@ export default function RootPage() {
 
                     <div className="p-4 space-y-2">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        {item.building_block && (
+                        {(item.building_block || item.hostel_block) && (
                           <span className="bg-gray-100 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded">
                             📍 {item.building_block || item.hostel_block}
                           </span>
@@ -428,3 +600,4 @@ export default function RootPage() {
     </div>
   )
 }
+
