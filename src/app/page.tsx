@@ -20,6 +20,7 @@ interface Item {
   owner_id: string
   status?: string
   created_at?: string
+  expires_at?: string
 }
 
 // Reusable elegant inline SVG camera placeholder component
@@ -37,6 +38,7 @@ function CameraPlaceholder() {
         <path 
           strokeLinecap="round" 
           strokeLinejoin="round" 
+          pathLength={1}
           d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" 
         />
         <path 
@@ -101,10 +103,11 @@ export default function RootPage() {
           }
         }
 
-        // 2. Load available items publicly from the database
+        // 2. Load available items publicly from the database (filtering out expired ones)
         const { data: itemsData, error } = await supabase
           .from('items')
           .select('*')
+          .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
           .order('created_at', { ascending: false })
 
         if (error) {
