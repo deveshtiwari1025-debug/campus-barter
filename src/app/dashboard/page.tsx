@@ -63,6 +63,7 @@ export default function DashboardPage() {
   const [userSession, setUserSession] = useState<any>(null)
 
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
+  const [similarItems, setSimilarItems] = useState<Item[]>([])
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0)
   const [activeHandshake, setActiveHandshake] = useState<Offer | null>(null)
   const [inputBuyerOtp, setInputBuyerOtp] = useState('')
@@ -83,6 +84,33 @@ export default function DashboardPage() {
     }
     getSession()
   }, [supabase])
+
+  // Client-side fetch for similar items inside the active modal configuration
+  useEffect(() => {
+    if (!selectedItem) {
+      setSimilarItems([])
+      return
+    }
+
+    const fetchSimilarItems = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('items')
+          .select('*')
+          .eq('category', selectedItem.category)
+          .eq('status', 'available')
+          .neq('id', selectedItem.id)
+          .limit(4)
+
+        if (error) throw error
+        setSimilarItems(data || [])
+      } catch (err) {
+        console.error('Error fetching similar recommendations:', err)
+      }
+    }
+
+    fetchSimilarItems()
+  }, [selectedItem, supabase])
 
   const fetchWishlist = useCallback(async (userId: string) => {
     try {
@@ -585,7 +613,7 @@ export default function DashboardPage() {
 
       {selectedItem && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-xl relative animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto no-scrollbar shadow-xl relative animate-in fade-in zoom-in-95 duration-150">
             <button
               onClick={() => setSelectedItem(null)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 font-bold text-base transition-colors z-10"
@@ -684,6 +712,54 @@ export default function DashboardPage() {
                 {selectedItem.listing_type === 'Swap' ? '🔄 Lock Swap Deal' : '🛒 Buy This Item'}
               </button>
             </div>
+
+            {/* Issue 7: Horizontal Similar items list recommendation engine container layout */}
+            {similarItems.length > 0 && (
+              <div className="mt-6 pt-5 border-t border-gray-100">
+                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center gap-1">
+                  👀 You might also like
+                </h3>
+                <div className="space-y-2">
+                  {similarItems.map((item) => {
+                    const itemImages = item.image_urls && item.image_urls.length > 0
+                      ? item.image_urls
+                      : item.image_url ? [item.image_url] : []
+
+                    return (
+                      <div
+                        key={`similar-${item.id}`}
+                        onClick={() => setSelectedItem(item)}
+                        className="flex items-center gap-3 p-2 rounded-xl border border-gray-50 hover:border-gray-100 hover:bg-gray-50/50 cursor-pointer transition-all group/card"
+                      >
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-50 flex-shrink-0 border border-gray-100 relative">
+                          {itemImages.length > 0 ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={itemImages[0]} alt={item.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-300">
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-xs font-bold text-gray-800 line-clamp-1 group-hover/card:text-[#5B8C72] transition-colors">{item.title}</h4>
+                          <p className="text-[10px] text-gray-400 font-medium">📍 {item.building_block}</p>
+                        </div>
+
+                        <span className={`px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-wider shadow-none flex-shrink-0 ${
+                          item.listing_type === 'Swap' ? 'bg-purple-50 text-purple-600' : 'bg-amber-50 text-amber-700'
+                        }`}>
+                          {item.listing_type === 'Swap' ? 'SWAP' : `₹${item.price}`}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

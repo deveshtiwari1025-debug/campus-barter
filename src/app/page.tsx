@@ -70,6 +70,7 @@ export default function RootPage() {
   
   // Modal View State
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
+  const [similarItems, setSimilarItems] = useState<Item[]>([])
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
   useEffect(() => {
@@ -167,6 +168,33 @@ export default function RootPage() {
 
     setFilteredItems(output)
   }, [searchQuery, activeFilter, activeCategory, items])
+
+  // Client-side recommendation hook matching selected category items
+  useEffect(() => {
+    if (!selectedItem) {
+      setSimilarItems([])
+      return
+    }
+
+    const fetchSimilarItems = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('items')
+          .select('*')
+          .eq('category', selectedItem.category)
+          .or('status.is.null,status.eq.available')
+          .neq('id', selectedItem.id)
+          .limit(4)
+
+        if (error) throw error
+        setSimilarItems(data || [])
+      } catch (err) {
+        console.error('Failed to resolve related matching listings:', err)
+      }
+    }
+
+    fetchSimilarItems()
+  }, [selectedItem, supabase])
 
   const handleActionProtection = (actionType: 'view' | 'lock', item?: Item) => {
     if (!user) {
@@ -515,7 +543,7 @@ export default function RootPage() {
       {/* High-Fidelity Product Inspection Drawer / Modal */}
       {selectedItem && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-gray-100 relative">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl border border-gray-100 relative">
             
             {/* Close Modal Interactor */}
             <button
@@ -618,6 +646,55 @@ export default function RootPage() {
                   🔄 Lock Swap Deal
                 </button>
               </div>
+
+              {/* Issue 7: Horizontal Related item recommendations rows layout stream */}
+              {similarItems.length > 0 && (
+                <div className="mt-6 pt-5 border-t border-gray-100">
+                  <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center gap-1">
+                    👀 You might also like
+                  </h3>
+                  <div className="space-y-2">
+                    {similarItems.map((item) => {
+                      const itemImages = getItemImages(item)
+                      const hasSwap = item.listing_type?.toLowerCase().includes('swap') || item.listing_type?.toLowerCase().includes('trade') || !!item.wanted_in_exchange
+
+                      return (
+                        <div
+                          key={`similar-${item.id}`}
+                          onClick={() => {
+                            setSelectedItem(item)
+                            setCurrentImageIndex(0)
+                          }}
+                          className="flex items-center gap-3 p-2 rounded-xl border border-gray-50 hover:border-gray-100 hover:bg-gray-50/50 cursor-pointer transition-all group/card"
+                        >
+                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-50 flex-shrink-0 border border-gray-100 relative">
+                            {itemImages.length > 0 ? (
+                              <img src={itemImages[0]} alt={item.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-300">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-xs font-bold text-gray-800 line-clamp-1 group-hover/card:text-[#5B8C72] transition-colors">{item.title}</h4>
+                            <p className="text-[10px] text-gray-400 font-medium">📍 {item.building_block || item.hostel_block || 'VIT'}</p>
+                          </div>
+
+                          <span className={`px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-wider shadow-none flex-shrink-0 ${
+                            hasSwap ? 'bg-purple-50 text-purple-600' : 'bg-amber-50 text-amber-700'
+                          }`}>
+                            {hasSwap ? 'Swap' : `₹${item.price || 0}`}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
