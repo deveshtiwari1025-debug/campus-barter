@@ -92,7 +92,7 @@ export default function DashboardPage() {
         .eq('user_id', userId)
 
       if (error) throw error
-      setWishlistedIds(new Set(data?.map((w) => w.item_id) || []))
+      setWishlistedIds(new Set(data?.map((w: any) => w.item_id) || []))
     } catch (err) {
       console.error('Error loading wishlist mapping:', err)
     }
