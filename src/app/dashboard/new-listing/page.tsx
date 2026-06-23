@@ -124,38 +124,42 @@ export default function NewListingPage() {
   }
 
   return (
-    <div className="max-w-xl mx-auto bg-white border border-gray-100 rounded-2xl shadow-sm p-6 sm:p-8 mt-4">
+    <div className="max-w-xl mx-auto bg-white border border-gray-100 rounded-2xl shadow-sm p-6 sm:p-8 mt-4 font-body">
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-gray-800">List an Item</h1>
-        <p className="text-xs text-gray-500">Post items securely with real image uploads to your marketplace.</p>
+        <h1 className="text-xl font-bold font-display text-[#2A2F2D]">List an Item</h1>
+        <p className="text-xs text-[#2A2F2D]/70">Post items securely with real image uploads to your marketplace.</p>
       </div>
 
       {errorMessage && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-100 text-xs font-medium text-red-600 rounded-lg">
+        <div className="mb-4 p-4 bg-[#C97064]/10 border border-[#C97064]/20 text-xs font-semibold text-[#C97064] rounded-xl">
           {errorMessage}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Item Name / Title</label>
+          <label className="block text-xs font-bold text-[#2A2F2D] uppercase tracking-wider mb-1">
+            Item Name / Title
+          </label>
           <input
             type="text"
             required
             placeholder="e.g., Lab Coat or Calculator"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] bg-white"
+            className="mt-1 block w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#5B8C72] focus:ring-1 focus:ring-[#5B8C72] text-[#2A2F2D] placeholder-gray-400 text-sm shadow-sm transition-all"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Category</label>
+            <label className="block text-xs font-bold text-[#2A2F2D] uppercase tracking-wider mb-1">
+              Category
+            </label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] bg-white"
+              className="mt-1 block w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#5B8C72] focus:ring-1 focus:ring-[#5B8C72] text-[#2A2F2D] text-sm shadow-sm transition-all cursor-pointer"
             >
               <option value="Electronics">Electronics</option>
               <option value="Books">Books & Textbooks</option>
@@ -166,11 +170,13 @@ export default function NewListingPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Hostel Block Location</label>
+            <label className="block text-xs font-bold text-[#2A2F2D] uppercase tracking-wider mb-1">
+              Hostel Block Location
+            </label>
             <select
               value={buildingBlock}
               onChange={(e) => setBuildingBlock(e.target.value)}
-              className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] bg-white"
+              className="mt-1 block w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#5B8C72] focus:ring-1 focus:ring-[#5B8C72] text-[#2A2F2D] text-sm shadow-sm transition-all cursor-pointer"
             >
               <option value="A Block">A Block</option>
               <option value="B Block">B Block</option>
@@ -189,28 +195,32 @@ export default function NewListingPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">WhatsApp Contact Number</label>
+            <label className="block text-xs font-bold text-[#2A2F2D] uppercase tracking-wider mb-1">
+              WhatsApp Contact Number
+            </label>
             <input
               type="tel"
               required
               placeholder="e.g., 9876543210"
               value={whatsappNumber}
               onChange={(e) => setWhatsappNumber(e.target.value)}
-              className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] bg-white"
+              className="mt-1 block w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#5B8C72] focus:ring-1 focus:ring-[#5B8C72] text-[#2A2F2D] placeholder-gray-400 text-sm shadow-sm transition-all"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Upload Product Images</label>
+            <label className="block text-xs font-bold text-[#2A2F2D] uppercase tracking-wider mb-1">
+              Upload Product Images
+            </label>
             <input
               type="file"
               accept="image/*"
               multiple
               onChange={handleFileChange}
-              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#5B8C72]/10 file:text-[#5B8C72] hover:file:bg-[#5B8C72]/20 cursor-pointer"
+              className="mt-1 block w-full text-sm text-[#2A2F2D]/60 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#5B8C72]/10 file:text-[#5B8C72] hover:file:bg-[#5B8C72]/20 cursor-pointer layout-transition"
             />
             {imageFiles.length > 0 && (
-              <p className="text-[11px] text-[#5B8C72] mt-1 font-medium">
+              <p className="text-[11px] text-[#5B8C72] mt-1 font-semibold">
                 ✓ {imageFiles.length} files selected
               </p>
             )}
@@ -220,10 +230,12 @@ export default function NewListingPage() {
         {/* IMAGE PREVIEW AND DELETE SELECTION GRID */}
         {previews.length > 0 && (
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Selected Images Preview (Click X to remove)</label>
-            <div className="grid grid-cols-4 gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
+            <label className="block text-xs font-bold text-[#2A2F2D]/60 uppercase tracking-wider mb-2">
+              Selected Images Preview (Click X to remove)
+            </label>
+            <div className="grid grid-cols-4 gap-3 bg-[#F6F8F7] p-3 rounded-xl border border-gray-100">
               {previews.map((url, index) => (
-                <div key={url} className="relative aspect-square w-full rounded-lg overflow-hidden border border-gray-200 group bg-white shadow-sm">
+                <div key={url} className="relative aspect-square w-full rounded-xl overflow-hidden border border-gray-200 group bg-white shadow-sm">
                   <img 
                     src={url} 
                     alt="Preview layout" 
@@ -232,7 +244,7 @@ export default function NewListingPage() {
                   <button
                     type="button"
                     onClick={() => handleRemoveImage(index)}
-                    className="absolute top-1 right-1 bg-red-500/95 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow transition-colors"
+                    className="absolute top-1 right-1 bg-[#C97064] hover:bg-[#b05a4e] text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow transition-colors"
                     title="Remove this image"
                   >
                     ✕
@@ -244,15 +256,17 @@ export default function NewListingPage() {
         )}
 
         <div>
-          <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Listing Strategy Type</label>
+          <label className="block text-xs font-bold text-[#2A2F2D] uppercase tracking-wider mb-2">
+            Listing Strategy Type
+          </label>
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => setListingType('Swap')}
-              className={`py-2.5 rounded-lg text-sm font-semibold border transition-all ${
+              className={`py-2.5 rounded-xl text-xs font-bold border uppercase tracking-wider transition-all ${
                 listingType === 'Swap'
-                  ? 'border-[#5B8C72] bg-[#5B8C72]/5 text-[#5B8C72]'
-                  : 'border-gray-200 hover:bg-gray-50 text-gray-600'
+                  ? 'border-[#5B8C72] bg-[#5B8C72]/10 text-[#5B8C72]'
+                  : 'border-gray-200 hover:bg-gray-50 text-[#2A2F2D]/60'
               }`}
             >
               🔄 Swap / Trade
@@ -260,10 +274,10 @@ export default function NewListingPage() {
             <button
               type="button"
               onClick={() => setListingType('Buy')}
-              className={`py-2.5 rounded-lg text-sm font-semibold border transition-all ${
+              className={`py-2.5 rounded-xl text-xs font-bold border uppercase tracking-wider transition-all ${
                 listingType === 'Buy'
-                  ? 'border-[#5B8C72] bg-[#5B8C72]/5 text-[#5B8C72]'
-                  : 'border-gray-200 hover:bg-gray-50 text-gray-600'
+                  ? 'border-[#E0A458] bg-[#E0A458]/10 text-[#E0A458]'
+                  : 'border-gray-200 hover:bg-gray-50 text-[#2A2F2D]/60'
               }`}
             >
               💰 Sell / Cash
@@ -273,7 +287,9 @@ export default function NewListingPage() {
 
         {listingType === 'Buy' ? (
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Price (₹)</label>
+            <label className="block text-xs font-bold text-[#2A2F2D] uppercase tracking-wider mb-1">
+              Price (₹)
+            </label>
             <input
               type="number"
               required
@@ -281,38 +297,42 @@ export default function NewListingPage() {
               placeholder="e.g., 450"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
-              className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] bg-white"
+              className="mt-1 block w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#5B8C72] focus:ring-1 focus:ring-[#5B8C72] text-[#2A2F2D] placeholder-gray-400 text-sm shadow-sm transition-all"
             />
           </div>
         ) : (
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Wanted Item in Exchange (Optional)</label>
+            <label className="block text-xs font-bold text-[#2A2F2D] uppercase tracking-wider mb-1">
+              Wanted Item in Exchange (Optional)
+            </label>
             <input
               type="text"
               placeholder="e.g., Looking for a Matrix Calculator or Lab Manual"
               value={wantedInExchange}
               onChange={(e) => setWantedInExchange(e.target.value)}
-              className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] bg-white"
+              className="mt-1 block w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#5B8C72] focus:ring-1 focus:ring-[#5B8C72] text-[#2A2F2D] placeholder-gray-400 text-sm shadow-sm transition-all"
             />
           </div>
         )}
 
         <div>
-          <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Condition & Description</label>
+          <label className="block text-xs font-bold text-[#2A2F2D] uppercase tracking-wider mb-1">
+            Condition & Description
+          </label>
           <textarea
             rows={4}
             required
             placeholder="Describe your item condition, preferred meet-up times, etc..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[#5B8C72] resize-none bg-white"
+            className="mt-1 block w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#5B8C72] focus:ring-1 focus:ring-[#5B8C72] text-[#2A2F2D] placeholder-gray-400 text-sm shadow-sm resize-none transition-all"
           />
         </div>
 
         <button
           type="submit"
           disabled={submitting || uploadingImage}
-          className="w-full py-3 text-xs font-bold text-white bg-[#5B8C72] hover:bg-[#5B8C72]/90 disabled:bg-gray-300 rounded-lg transition-colors tracking-wider uppercase mt-2 shadow-sm"
+          className="w-full py-3 text-xs font-bold text-white bg-[#5B8C72] hover:bg-[#4a735d] disabled:opacity-50 disabled:bg-gray-300 rounded-xl transition-all tracking-wider uppercase mt-2 shadow-sm"
         >
           {uploadingImage ? 'Uploading Images...' : submitting ? 'Publishing Entry...' : 'Publish Listing'}
         </button>
