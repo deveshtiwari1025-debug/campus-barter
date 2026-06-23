@@ -72,7 +72,7 @@ export default function WishlistPage() {
       // Filter out any broken mappings or sold entries
       const filtered: Item[] = (data || [])
         .map((row: any) => row.items)
-        .filter((item): item is Item => !!item && item.status === 'available')
+        .filter((item: any): item is Item => !!item && item.status === 'available')
 
       setItems(filtered)
     } catch (err) {
