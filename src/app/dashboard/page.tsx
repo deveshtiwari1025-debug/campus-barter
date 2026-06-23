@@ -19,6 +19,7 @@ interface Item {
   status: string
   owner_id: string
   created_at: string
+  expires_at: string 
 }
 
 interface Offer {
@@ -88,6 +89,7 @@ export default function DashboardPage() {
       const { data, error } = await supabase
         .from('items')
         .select('*')
+        .gt('expires_at', new Date().toISOString()) 
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -190,7 +192,6 @@ export default function DashboardPage() {
     else fetchMarketplaceItems()
   }
 
-  // Filter conditions matches image_3379c4.png actions
   const displayedItems = items.filter((item) => {
     const query = searchQuery.toLowerCase()
     const matchesSearch =
@@ -208,7 +209,6 @@ export default function DashboardPage() {
     return matchesSearch && matchesFilter && matchesCategory && matchesTab
   })
 
-  // Derive top 2 fresh items for the "Newly Listed" section shown in image_3379c4.png
   const newlyListedItems = items
     .filter((item) => item.status === 'available')
     .slice(0, 2)
@@ -217,7 +217,6 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 text-gray-900">
-      {/* Search Input Container */}
       <div className="w-full mb-4">
         <input
           type="text"
@@ -228,7 +227,6 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Listing Type Filter Row + Create Post Action */}
       <div className="flex items-center justify-between gap-2 mb-8">
         <div className="flex items-center gap-1.5 bg-gray-100/70 p-1 rounded-xl">
           {(['All', 'Swap', 'Buy'] as const).map((t) => (
@@ -270,7 +268,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Secure Handshake Widget */}
       {activeHandshake && (
         <div className="mb-8 p-6 bg-amber-50/70 border border-amber-200 rounded-2xl max-w-md mx-auto">
           <h3 className="text-sm font-bold text-amber-900 mb-1">🔐 Secure Handshake Verification</h3>
@@ -330,10 +327,8 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Conditional feed display matching image_3379c4.png structure */}
       {activeTab === 'Marketplace' && (
         <>
-          {/* Section: Newly Listed */}
           <div className="mb-8">
             <div className="flex justify-between items-baseline mb-4">
               <h2 className="text-base font-bold text-gray-900 flex items-center gap-1.5">
@@ -382,7 +377,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Section: Browse by Category */}
           <div className="mb-10">
             <div className="mb-3">
               <h2 className="text-base font-bold text-gray-900 flex items-center gap-1.5">
@@ -409,7 +403,6 @@ export default function DashboardPage() {
         </>
       )}
 
-      {/* Section: Main Target Feed (ALL CAMPUS LISTINGS) */}
       <div>
         <div className="flex justify-between items-baseline mb-4 border-b border-gray-100 pb-2">
           <h2 className="text-sm font-bold uppercase tracking-wider text-gray-900">
@@ -492,7 +485,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Item Detail Modal with dynamic carousel controls */}
       {selectedItem && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-xl relative animate-in fade-in zoom-in-95 duration-150">
