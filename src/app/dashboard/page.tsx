@@ -251,7 +251,7 @@ export default function DashboardPage() {
         />
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
-          {(([ 'All', 'Swap', 'Buy' ] as const).map((t) => (
+          {([ 'All', 'Swap', 'Buy' ] as const).map((t) => (
             <button
               key={t}
               onClick={() => setFilter(t)}
