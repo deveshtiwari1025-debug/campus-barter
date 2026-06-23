@@ -31,6 +31,34 @@ interface Offer {
   status: string
 }
 
+// Reusable elegant inline SVG camera placeholder component
+function CameraPlaceholder() {
+  return (
+    <div className="w-full h-full bg-[#F6F8F7] flex flex-col items-center justify-center space-y-1.5 p-4 select-none">
+      <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        fill="none" 
+        viewBox="0 0 24 24" 
+        strokeWidth={1.5} 
+        stroke="currentColor" 
+        className="w-7 h-7 text-gray-400/80"
+      >
+        <path 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" 
+        />
+        <path 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" 
+        />
+      </svg>
+      <span className="text-[11px] font-medium text-gray-400">No photo uploaded</span>
+    </div>
+  )
+}
+
 export default function DashboardPage() {
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
@@ -223,7 +251,7 @@ export default function DashboardPage() {
         />
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
-          {(['All', 'Swap', 'Buy'] as const).map((t) => (
+          {(([ 'All', 'Swap', 'Buy' ] as const).map((t) => (
             <button
               key={t}
               onClick={() => setFilter(t)}
@@ -310,76 +338,86 @@ export default function DashboardPage() {
         <p className="text-center text-sm text-gray-400 py-12">No listings found.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayedItems.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm flex flex-col justify-between"
-            >
-              <div>
-                {item.image_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={item.image_url}
-                    alt={item.title}
-                    className="w-full h-40 object-cover rounded-xl mb-4 border border-gray-50"
-                  />
-                )}
-                <div className="flex justify-between items-start gap-2 mb-2">
-                  <h2 className="font-bold text-gray-800 text-base line-clamp-1">{item.title}</h2>
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                      item.listing_type === 'Swap'
-                        ? 'bg-purple-50 text-purple-600 border border-purple-100'
-                        : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                    }`}
-                  >
-                    {item.listing_type === 'Swap' ? '🔄 Swap' : `₹${item.price}`}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 line-clamp-2 mb-4">{item.description}</p>
-              </div>
+          {displayedItems.map((item) => {
+            const cardImages = item.image_urls && item.image_urls.length > 0
+              ? item.image_urls
+              : item.image_url ? [item.image_url] : []
 
-              <div className="pt-4 border-t border-gray-50 flex flex-col gap-2">
-                <div className="flex justify-between text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
-                  <span>📍 {item.building_block}</span>
-                  <span>📦 {item.category}</span>
-                </div>
-
-                {activeTab === 'MyListings' ? (
-                  <div className="flex gap-2">
+            return (
+              <div
+                key={item.id}
+                className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm flex flex-col justify-between"
+              >
+                <div>
+                  <div className="w-full h-40 mb-4 rounded-xl overflow-hidden border border-gray-50">
+                    {cardImages.length > 0 ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={cardImages[0]}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <CameraPlaceholder />
+                    )}
+                  </div>
+                  <div className="flex justify-between items-start gap-2 mb-2">
+                    <h2 className="font-bold text-gray-800 text-base line-clamp-1">{item.title}</h2>
                     <span
-                      className={`px-3 py-1.5 text-xs font-bold rounded-lg text-center flex-1 ${
-                        item.status === 'sold'
-                          ? 'bg-gray-100 text-gray-400'
-                          : 'bg-emerald-50 text-emerald-700'
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                        item.listing_type === 'Swap'
+                          ? 'bg-purple-50 text-purple-600 border border-purple-100'
+                          : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
                       }`}
                     >
-                      {item.status === 'sold' ? 'Sold Out' : 'Active'}
+                      {item.listing_type === 'Swap' ? '🔄 Swap' : `₹${item.price}`}
                     </span>
-                    <button
-                      onClick={() => router.push(`/dashboard/items/${item.id}/edit`)}
-                      className="px-3 py-1.5 text-xs font-bold text-[#5B8C72] bg-[#5B8C72]/10 rounded-lg hover:bg-[#5B8C72]/20"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => deleteItem(item.id)}
-                      className="px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 rounded-lg hover:bg-red-100"
-                    >
-                      Delete
-                    </button>
                   </div>
-                ) : (
-                  <button
-                    onClick={() => setSelectedItem(item)}
-                    className="w-full py-2 text-xs font-bold text-center text-white bg-[#5B8C72] hover:bg-[#5B8C72]/90 rounded-lg uppercase tracking-wider"
-                  >
-                    View Details →
-                  </button>
-                )}
+                  <p className="text-xs text-gray-500 line-clamp-2 mb-4">{item.description}</p>
+                </div>
+
+                <div className="pt-4 border-t border-gray-50 flex flex-col gap-2">
+                  <div className="flex justify-between text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
+                    <span>📍 {item.building_block}</span>
+                    <span>📦 {item.category}</span>
+                  </div>
+
+                  {activeTab === 'MyListings' ? (
+                    <div className="flex gap-2">
+                      <span
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg text-center flex-1 ${
+                          item.status === 'sold'
+                            ? 'bg-gray-100 text-gray-400'
+                            : 'bg-emerald-50 text-emerald-700'
+                        }`}
+                      >
+                        {item.status === 'sold' ? 'Sold Out' : 'Active'}
+                      </span>
+                      <button
+                        onClick={() => router.push(`/dashboard/items/${item.id}/edit`)}
+                        className="px-3 py-1.5 text-xs font-bold text-[#5B8C72] bg-[#5B8C72]/10 rounded-lg hover:bg-[#5B8C72]/20"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => deleteItem(item.id)}
+                        className="px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 rounded-lg hover:bg-red-100"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setSelectedItem(item)}
+                      className="w-full py-2 text-xs font-bold text-center text-white bg-[#5B8C72] hover:bg-[#5B8C72]/90 rounded-lg uppercase tracking-wider"
+                    >
+                      View Details →
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -400,7 +438,13 @@ export default function DashboardPage() {
                 ? selectedItem.image_urls
                 : selectedItem.image_url ? [selectedItem.image_url] : [];
 
-              if (urls.length === 0) return null;
+              if (urls.length === 0) {
+                return (
+                  <div className="w-full h-48 mb-4 overflow-hidden rounded-2xl border border-gray-100">
+                    <CameraPlaceholder />
+                  </div>
+                )
+              }
 
               return (
                 <div className="relative w-full h-48 mb-4 overflow-hidden rounded-2xl border border-gray-100 bg-gray-50 group">
