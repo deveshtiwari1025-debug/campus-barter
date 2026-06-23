@@ -41,7 +41,7 @@ export default function RootPage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
   useEffect(() => {
-    async function checkAuth AndLoadData() {
+    async function checkAuthAndLoadData() {
       try {
         setLoading(true)
         
@@ -302,7 +302,7 @@ export default function RootPage() {
                       onClick={() => handleActionProtection('view', item)}
                       className="w-full py-2 bg-gray-50 text-gray-700 hover:bg-[#5B8C72] hover:text-white border border-gray-200 hover:border-[#5B8C72] text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1"
                     >
-                      View Details &rarr;
+                      View Details →
                     </button>
                   </div>
                 </div>
@@ -322,7 +322,7 @@ export default function RootPage() {
               onClick={() => setSelectedItem(null)}
               className="absolute top-3 right-3 z-50 w-8 h-8 flex items-center justify-center bg-black/40 hover:bg-black/60 text-white rounded-full transition-colors text-sm font-bold"
             >
-              &times;
+              ×
             </button>
 
             {/* Carousel Slider Panel Container */}
@@ -340,13 +340,13 @@ export default function RootPage() {
                         onClick={() => setCurrentImageIndex((prev) => (prev === 0 ? getItemImages(selectedItem).length - 1 : prev - 1))}
                         className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-1.5 rounded-full shadow-sm text-xs font-bold"
                       >
-                        &larr;
+                        ←
                       </button>
                       <button
                         onClick={() => setCurrentImageIndex((prev) => (prev === getItemImages(selectedItem).length - 1 ? 0 : prev + 1))}
                         className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-1.5 rounded-full shadow-sm text-xs font-bold"
                       >
-                        &rarr;
+                        →
                       </button>
                       <div className="absolute bottom-2 left-1/2 -translate-y-1/2 flex space-x-1">
                         {getItemImages(selectedItem).map((_, idx) => (
@@ -382,7 +382,7 @@ export default function RootPage() {
               </div>
 
               <div className="space-y-2 border-t border-gray-100 pt-3">
-                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Condition &amp; Description</h4>
+                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">{"Condition & Description"}</h4>
                 <p className="text-sm text-gray-600 leading-relaxed bg-[#F6F8F7] p-3 rounded-lg border border-gray-50 whitespace-pre-line">
                   {selectedItem.description}
                 </p>
